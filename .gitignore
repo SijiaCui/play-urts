@@ -3,5 +3,11 @@
 __pycache__/
 
 # ignored files
-microrts.jar
 videos/
+
+experiments/gym-microrts-static-files/tmp
+experiments/videos/
+experiments/runs/
+experiments/models/
+
+gym_microrts/microrts/microrts.jar
