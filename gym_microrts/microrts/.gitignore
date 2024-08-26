@@ -1,8 +1,0 @@
-microrts.jar
-*.*~
-*.class
-/bin/
-/.classpath
-/.project
-/.idea
-/.vscode
