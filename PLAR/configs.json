@@ -1,0 +1,6 @@
+{
+    "llm_engine": "Qwen2-72B-Instruct",
+    "llm_engine_temperature": 0,
+    "llm_engine_max_tokens": 1024,
+    "llm_prompt": "prompt1"
+}

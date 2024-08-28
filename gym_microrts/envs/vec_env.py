@@ -276,7 +276,7 @@ class MicroRTSGridModeVecEnv:
     def close(self):
         if jpype._jpype.isStarted():
             self.vec_client.close()
-            jpype.shutdownJVM()
+            # jpype.shutdownJVM()
 
     def get_action_mask(self):
         """
