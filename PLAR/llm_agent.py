@@ -6,6 +6,7 @@ from langchain_openai import AzureChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 
+from PLAR.utils.utils import *
 
 class coa_agent:
     def __init__(self, args) -> None:
@@ -13,35 +14,54 @@ class coa_agent:
 
         # qwen: qwen, gpt: azuregpt, llama: llama2
         self.llm = qwen(
-            self.args.llm_engine, 
-            self.args.llm_temperature, 
-            self.args.llm_max_tokens
+            self.args.engine, 
+            self.args.temperature, 
+            self.args.max_tokens
             )
 
         self.step = 0
+        self.prompt = coa_prompt
+        self.examples = ""
+    
+    def _post_processing(self, response: str) -> str:
 
-        pass
+        return response
 
     def _agent_prompt(self) -> str:
         kwargs = {
-            
+            'observation': self.obs,
+            'examples': self.examples
         }
 
-        self.prompt.format(**kwargs)
-
+        return self.prompt.format(**kwargs)
+        
 
     def _agent_response(self) -> str:
-        prompt = self._agent_prompt()
-
-
-        pass
-
-
-    def run(self) -> str:
+        LLM_DEBUG = True
+        if LLM_DEBUG: print(f"{'-'*20}#{self.__class__.__name__} START DEBUGGING#{'-'*20}", flush=True)
+        prompt_content = self._agent_prompt()
+        if LLM_DEBUG: print(f"PROMPT: {self.prompt.input_variables}\n{prompt_content}", flush=True)
         
+        try:
+            response = self.llm(prompt=prompt_content)
+        except Exception as e:
+            response = f"llm reponse error: {e}"
+
+        if LLM_DEBUG: print(f"RESPONSE: {response}", flush=True)
+        response = self._post_processing(response)
+        if LLM_DEBUG: print(f"RESPONSE POST_PROCESSING: {response}", flush=True)
+        if LLM_DEBUG: print(f"{'-'*20}#{self.__class__.__name__} END DEBUGGING#{'-'*20}", flush=True)
+
+        return response
+
+
+    def run(self, obs) -> str:
+
+        self.obs = obs
         
-        self.llm()
-    
+        self.reponse = self._agent_response()
+
+        return self.reponse
 
 
 class llms:
@@ -66,7 +86,7 @@ class azuregpt(llms):
         self.max_tokens = max_tokens
 
     def __call__(self, prompt) -> str:
-        super().__call__(self, prompt)
+        super().__call__(prompt)
         self.client([HumanMessage(content=prompt)]).content
 
     def is_excessive_token(self, prompt) -> bool:
@@ -89,7 +109,7 @@ class qwen(llms):
         self.max_tokens = max_tokens
 
     def __call__(self, prompt) -> str:
-        super().__call__(self, prompt)
+        super().__call__(prompt)
         response = self.client.chat.completions.create(
             model=self.engine,
             messages=[{"role": "user", "content": prompt}],
@@ -108,5 +128,9 @@ class llama2(llms):
 
 
 if __name__ == "__main__":
+    args = load_args()
 
-    ca = coa_agent()
+    ca = coa_agent(args)
+    response = ca.run("who are you?")
+
+    print(response)

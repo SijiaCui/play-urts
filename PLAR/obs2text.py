@@ -1,11 +1,12 @@
 import numpy as np
 
+# import env and AI bots
 from gym_microrts import microrts_ai
 from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
 from stable_baselines3.common.vec_env import VecVideoRecorder
 
 import json
-from PLAR.utils import en2zh
+from PLAR.utils.utils import en2zh, CHOOSEN_MAPS
 
 def check_array(arr: np.ndarray):
     print(f"{'*' * 20}")
@@ -432,12 +433,14 @@ def get_blue_text(blue_data: json) -> str:
         text_light + text_heavy + text_ranged
     return text
 
+
 def get_red_text(red_data: json) -> str:
     '''
     input: data['red']
     output: text description of env
     '''
     return get_blue_text(red_data).replace(CONST_BLUE, CONST_RED)
+
 
 def obs_2_text(map_width: int, map_height: int, obs: np.ndarray) -> str:
     print(f"{'*'*10}Obs2Text: running{'*'*10}", flush=True)
@@ -463,39 +466,6 @@ def obs_2_text(map_width: int, map_height: int, obs: np.ndarray) -> str:
     print(f"{'*'*10}Obs2Text: done{'*'*10}", flush=True)
     return text, text_ZH
 
-
-def exp_maps() -> dict:
-    choosen_maps = {
-        # 4x4 only blue
-        '0': 'maps/4x4/baseOneWorkerMaxResources4x4.xml', # Only blue: 1 base, 1 worker; MaxResources
-        # 4x4 not balance
-        '1': 'maps/4x4/base4x4.xml', # Blue: 1 base, 1 worker; Red: 1 base; not balance
-
-        # standard
-        '2': 'maps/4x4/basesWorkers4x4.xml', # Blue/Red: 1 base, 1 worker
-        '3': 'maps/8x8/basesWorkers8x8.xml', # Blue/Red: 1 base, 1 worker
-        '4': 'maps/16x16/basesWorkers16x16.xml', # Blue/Red: 1 base, 1 worker
-        # standard multi-bases
-        '5': 'maps/8x8/TwoBasesWorkers8x8.xml', # Blue/Red: 2 base, 2 worker
-        '6': 'maps/8x8/ThreeBasesWorkers8x8.xml',  # Blue/Red: 3 base, 3 worker
-        '7': 'maps/8x8/FourBasesWorkers8x8.xml',  # Blue/Red: 4 base, 4 worker
-        '8': 'maps/12x12/SixBasesWorkers12x12.xml', # Blue/Red: 6 base, 6 worker
-        '9': 'maps/16x16/EightBasesWorkers16x16.xml', # Blue/Red: 8 base, 8 worker
-        '10': 'maps/EightBasesWorkers16x12.xml', # Blue/Red: 8 base, 8 worker
-
-        # 8x8 Obstacle
-        '11': 'maps/8x8/basesWorkers8x8Obstacle.xml', # Blue/Red: 1 base, 1 worker; Obstacle
-
-        # melee
-        '12': 'maps/melee4x4light2.xml',  # Blue/Red: 2 light
-        '13': 'maps/melee4x4Mixed2.xml',  # Blue/Red: 1 light, 1 heavy
-        '14': 'maps/8x8/melee8x8light4.xml', # Blue/Red: 4 light
-        '15': 'maps/8x8/melee8x8Mixed4.xml', # Blue/Red: 2 light, 2 heavy
-        '16': 'maps/8x8/melee8x8Mixed6.xml', # Blue/Red: 2 light, 2 heavy, 2 ranged
-        '17': 'maps/12x12/melee12x12Mixed12.xml', # Blue/Red: 4 light, 4 heavy, 4 ranged
-        '18': 'maps/melee14x12Mixed18.xml',  # Blue/Red: 6 light, 6 heavy, 6 ranged
-        }
-    return choosen_maps
 
 def show_all_maps_figure():
     '''
@@ -537,10 +507,9 @@ def show_all_maps_figure():
 
 
 def test_obs_2_text():
-    choosen_maps = exp_maps()
-    print(len(choosen_maps), choosen_maps)
+    print(len(CHOOSEN_MAPS), CHOOSEN_MAPS)
 
-    for map_name in choosen_maps.values():
+    for map_name in CHOOSEN_MAPS.values():
         envs = MicroRTSGridModeVecEnv(
             num_selfplay_envs=0,
             num_bot_envs=1,
@@ -552,14 +521,13 @@ def test_obs_2_text():
             autobuild=False
         )
         name_prefix = map_name.split('maps/')[-1].split('.xml')[0].replace('/', '-')
-        envs = VecVideoRecorder(envs, "videos", record_video_trigger=lambda x: x == 0, video_length=1, name_prefix=name_prefix)
+        # envs = VecVideoRecorder(envs, "videos", record_video_trigger=lambda x: x == 0, video_length=1, name_prefix=name_prefix)
         
         obs = envs.reset()
         # print(obs.shape)
         # (1, width, height, 27)
 
         text, text2 = obs_2_text(obs.shape[1], obs.shape[2], obs)
-        import os
         with open('./texts/' + name_prefix, 'w') as f:
             f.write(text + '\n')
             f.write(text2 + '\n')
