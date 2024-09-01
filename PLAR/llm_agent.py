@@ -21,16 +21,19 @@ class coa_agent:
 
         self.step = 0
         self.prompt = coa_prompt
-        self.examples = ""
     
     def _post_processing(self, response: str) -> str:
 
         return response
 
     def _agent_prompt(self) -> str:
+        # input_variables = ["manual", "opponent", "action_space", "examples", "observation"]
         kwargs = {
-            'observation': self.obs,
-            'examples': self.examples
+            "manual": COA_MANUAL,
+            "opponent": COA_OPPONENT,
+            'action_space': COA_ACTION_SPACE_STR,
+            'examples': COA_EXAMPLES,
+            'observation': self.obs
         }
 
         return self.prompt.format(**kwargs)

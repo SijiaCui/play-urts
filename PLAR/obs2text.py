@@ -442,8 +442,10 @@ def get_red_text(red_data: json) -> str:
     return get_blue_text(red_data).replace(CONST_BLUE, CONST_RED)
 
 
-def obs_2_text(map_width: int, map_height: int, obs: np.ndarray) -> str:
+def obs_2_text(obs: np.ndarray) -> str:
     print(f"{'*'*10}Obs2Text: running{'*'*10}", flush=True)
+    map_width = obs.shape[2]
+    map_height = obs.shape[1]
     text = ''
     obs = obs.reshape((map_width, map_height, -1))
     
@@ -464,7 +466,7 @@ def obs_2_text(map_width: int, map_height: int, obs: np.ndarray) -> str:
     print(f"Observation Text_ZH: \n{text_ZH}")
     
     print(f"{'*'*10}Obs2Text: done{'*'*10}", flush=True)
-    return text, text_ZH
+    return text
 
 
 def show_all_maps_figure():

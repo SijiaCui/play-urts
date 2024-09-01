@@ -1,8 +1,10 @@
 {
-    "video_fps": 10,
-    "video_length": 1000,
     "llm_engine": "Qwen2-72B-Instruct",
     "llm_engine_temperature": 0,
     "llm_engine_max_tokens": 1024,
-    "llm_prompt": "prompt1"
+    "llm_prompt": "prompt1",
+    "video_fps": 10,
+    "video_length": 200,
+    "action_queue_size": 100,
+    "map_index": 2
 }
