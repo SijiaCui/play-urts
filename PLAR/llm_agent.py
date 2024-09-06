@@ -6,7 +6,7 @@ from langchain_openai import AzureChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 
-from PLAR.utils.utils import *
+from PLAR.utils.utils import coa_prompt, COA_MANUAL, COA_OPPONENT, COA_ACTION_SPACE_STR, COA_EXAMPLES
 
 class coa_agent:
     def __init__(self, args) -> None:
@@ -131,6 +131,7 @@ class llama2(llms):
 
 
 if __name__ == "__main__":
+    from PLAR.utils.utils import load_args
     args = load_args()
 
     ca = coa_agent(args)

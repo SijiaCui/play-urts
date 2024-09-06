@@ -1,12 +1,6 @@
 import numpy as np
 
-# import env and AI bots
-from gym_microrts import microrts_ai
-from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
-from stable_baselines3.common.vec_env import VecVideoRecorder
-
 import json
-from PLAR.utils.utils import en2zh, CHOOSEN_MAPS
 
 def check_array(arr: np.ndarray):
     print(f"{'*' * 20}")
@@ -118,7 +112,8 @@ def get_json(obs: np.ndarray) -> dict:
                 'location': location,
                 'hp': hp,
                 'resource_num': resource_num,
-                'action': ACTION_MAP[str(action)]
+                'action': ACTION_MAP[str(action)],
+                'task': 'noop'
             }
         )
     # 蓝方兵营: location, hp, action
@@ -134,7 +129,8 @@ def get_json(obs: np.ndarray) -> dict:
             {
                 'location': location,
                 'hp': hp,
-                'action': ACTION_MAP[str(action)]
+                'action': ACTION_MAP[str(action)],
+                'task': 'noop'
             }
         )
     # 蓝方工人: location, hp, resource_num, action
@@ -152,7 +148,8 @@ def get_json(obs: np.ndarray) -> dict:
                 'location': location,
                 'hp': hp,
                 'resource_num': resource_num,
-                'action': ACTION_MAP[str(action)]
+                'action': ACTION_MAP[str(action)],
+                'task': 'noop'
             }
         )
     # 蓝方light: location, hp, action
@@ -168,7 +165,8 @@ def get_json(obs: np.ndarray) -> dict:
             {
                 'location': location,
                 'hp': hp,
-                'action': ACTION_MAP[str(action)]
+                'action': ACTION_MAP[str(action)],
+                'task': 'noop'
             }
         )
     # 蓝方重型士兵: location, hp, action
@@ -184,7 +182,8 @@ def get_json(obs: np.ndarray) -> dict:
             {
                 'location': location,
                 'hp': hp,
-                'action': ACTION_MAP[str(action)]
+                'action': ACTION_MAP[str(action)],
+                'task': 'noop'
             }
         )
     # 蓝方远程士兵: location, hp, action
@@ -200,7 +199,8 @@ def get_json(obs: np.ndarray) -> dict:
             {
                 'location': location,
                 'hp': hp,
-                'action': ACTION_MAP[str(action)]
+                'action': ACTION_MAP[str(action)],
+                'task': 'noop'
             }
         )
 
@@ -320,7 +320,7 @@ CONST_LIGHT = 'light soldier'
 CONST_HEAVY = 'heavy soldier'
 CONST_RANGED = 'ranged soldier'
 
-def get_env_text(env_data: json) -> str:
+def get_env_text(env_data: dict) -> str:
     '''
     input: data['env']
     {
@@ -349,7 +349,7 @@ def get_env_text(env_data: json) -> str:
     return  text
 
 
-def get_blue_text(blue_data: json) -> str:
+def get_blue_text(blue_data: dict) -> str:
     '''
     input: data['blue']
     {
@@ -434,7 +434,7 @@ def get_blue_text(blue_data: json) -> str:
     return text
 
 
-def get_red_text(red_data: json) -> str:
+def get_red_text(red_data: dict) -> str:
     '''
     input: data['red']
     output: text description of env
@@ -442,7 +442,16 @@ def get_red_text(red_data: json) -> str:
     return get_blue_text(red_data).replace(CONST_BLUE, CONST_RED)
 
 
-def obs_2_text(obs: np.ndarray) -> str:
+from typing import Tuple
+def obs_2_text(obs: np.ndarray, zh=False) -> Tuple[str, dict]:
+    '''
+    Input: 
+        np.ndarray: observation
+
+    Output: 
+        str: text description of observation
+        dict: json type observation
+    '''
     print(f"{'*'*10}Obs2Text: running{'*'*10}", flush=True)
     map_width = obs.shape[2]
     map_height = obs.shape[1]
@@ -461,12 +470,15 @@ def obs_2_text(obs: np.ndarray) -> str:
     text_blue = get_blue_text(data['blue'])
 
     text = text_env + text_red + text_blue
-    text_ZH = en2zh(text)
     print(f"Observation Text: \n{text}")
-    print(f"Observation Text_ZH: \n{text_ZH}")
+
+    if zh:
+        from PLAR.utils.utils import en2zh
+        text_ZH = en2zh(text)
+        print(f"Observation Text_ZH: \n{text_ZH}")
     
     print(f"{'*'*10}Obs2Text: done{'*'*10}", flush=True)
-    return text
+    return text, data
 
 
 def show_all_maps_figure():
@@ -475,6 +487,11 @@ def show_all_maps_figure():
     '''
 
     import os
+    # import env and AI bots
+    from gym_microrts import microrts_ai
+    from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
+    from stable_baselines3.common.vec_env import VecVideoRecorder
+
     map_dir = "/root/desc/play-urts/gym_microrts/microrts/maps"
     
     all_map_list = []
@@ -509,6 +526,12 @@ def show_all_maps_figure():
 
 
 def test_obs_2_text():
+    # import env and AI bots
+    from gym_microrts import microrts_ai
+    from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
+    from stable_baselines3.common.vec_env import VecVideoRecorder
+
+    from PLAR.utils.utils import CHOOSEN_MAPS
     print(len(CHOOSEN_MAPS), CHOOSEN_MAPS)
 
     for map_name in CHOOSEN_MAPS.values():
@@ -529,40 +552,15 @@ def test_obs_2_text():
         # print(obs.shape)
         # (1, width, height, 27)
 
-        text, text2 = obs_2_text(obs.shape[1], obs.shape[2], obs)
+        obs_text, obs_json = obs_2_text(obs)
         with open('./texts/' + name_prefix, 'w') as f:
-            f.write(text + '\n')
-            f.write(text2 + '\n')
+            f.write(json.dumps(obs_json) + '\n')
+            f.write(obs_text + '\n')
 
         envs.close()
+
 
 if __name__ == "__main__":
     # show_all_maps_figure()
     test_obs_2_text()
     exit()
-
-    choosen_maps = exp_maps()
-    print(len(choosen_maps), choosen_maps)
-
-    map_name = choosen_maps['0']
-
-    envs = MicroRTSGridModeVecEnv(
-        num_selfplay_envs=0,
-        num_bot_envs=1,
-        max_steps=2000,
-        render_theme=2,
-        ai2s=[microrts_ai.coacAI for _ in range(1)],
-        map_paths=[map_name],
-        reward_weight=np.array([10.0, 1.0, 1.0, 0.2, 1.0, 4.0]),
-        autobuild=False
-    )
-    name_prefix = map_name.split('maps/')[-1].split('.xml')[0].replace('/', '-')
-    envs = VecVideoRecorder(envs, "videos", record_video_trigger=lambda x: x == 0, video_length=1, name_prefix=name_prefix)
-    
-    obs = envs.reset()
-    # print(obs.shape)
-    # (1, width, height, 27)
-
-    obs_2_text(obs.shape[1], obs.shape[2], obs)
-
-    envs.close()

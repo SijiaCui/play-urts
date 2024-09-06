@@ -2,10 +2,6 @@ from PLAR.utils.fewshots import *
 from PLAR.utils.prompts import *
 from PLAR.utils.scripts import *
 
-import argparse
-import json
-import numpy as np
-
 # {[Harvest Mineral], [Build Base], [Build Barrack], [Produce Worker], [Produce Light Soldier], [Produce Heavy Soldier], [Produce Ranged Soldier], [Attack Enemy Worker], [Attack Enemy Buildings], [Attack Enemy Soldiers]}
 COA_H_Mineral = "[Harvest Mineral]"
 COA_B_Base = "[Build Base]"
@@ -23,7 +19,7 @@ COA_A_Soldiers = "[Attack Enemy Soldiers]"
 COA_ACTION_SPACE = [COA_H_Mineral, COA_B_Base, COA_B_Barrack, COA_P_Worker, COA_P_Light, COA_P_Heavy, COA_P_Ranged, COA_A_Worker, COA_A_Buildings, COA_A_Soldiers]
 COA_ACTION_SPACE_STR = f"{{{', '.join(COA_ACTION_SPACE)}}}"
 
-COA_SCRIPT_MAPPING = {
+TASK_SCRIPT_MAPPING = {
     COA_H_Mineral: harvest_mineral,
 
     COA_B_Base: build_base,
@@ -38,33 +34,6 @@ COA_SCRIPT_MAPPING = {
     COA_A_Buildings: attack_enemy_buildings,
     COA_A_Soldiers: attack_enemy_soldiers
 }
-
-
-def load_args():
-    parser = argparse.ArgumentParser()
-
-    # load config file to add default arguments
-    with open('configs.json', 'r') as f:
-        config = json.load(f)
-
-    # llm parameters
-    parser.add_argument('--engine', type=str, default=config['llm_engine'])
-    parser.add_argument('--temperature', type=float, default=float(config['llm_engine_temperature']))
-    parser.add_argument('--max_tokens', type=int, default=int(config['llm_engine_max_tokens']))
-    
-    # video recorder parameters
-    parser.add_argument('--video_fps', type=int, default=int(config['video_fps']))
-    parser.add_argument('--video_length', type=int, default=int(config['video_length']))
-    parser.add_argument('--capture_video', action='store_true')
-
-    # other parameters
-    parser.add_argument('--map_index', type=str, default=str(config['map_index']))
-    parser.add_argument('--action_queue_size', type=int, default=int(config['action_queue_size']))
-
-    args = parser.parse_args()
-
-    return args
-
 
 # the choosen maps for experiment
 CHOOSEN_MAPS = {
@@ -99,9 +68,54 @@ CHOOSEN_MAPS = {
 }
 
 
+def load_args():
+    import json
+    import argparse
 
-from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
-def sample_action(env: MicroRTSGridModeVecEnv):
+    parser = argparse.ArgumentParser()
+
+    # load config file to add default arguments
+    with open('/root/desc/play-urts/PLAR/configs.json', 'r') as f:
+        config = json.load(f)
+
+    # llm parameters
+    parser.add_argument('--engine', type=str, default=config['llm_engine'])
+    parser.add_argument('--temperature', type=float, default=float(config['llm_engine_temperature']))
+    parser.add_argument('--max_tokens', type=int, default=int(config['llm_engine_max_tokens']))
+    
+    # video recorder parameters
+    parser.add_argument('--video_fps', type=int, default=int(config['video_fps']))
+    parser.add_argument('--video_length', type=int, default=int(config['video_length']))
+    parser.add_argument('--capture_video', action='store_true')
+
+    # other parameters
+    parser.add_argument('--map_index', type=str, default=str(config['map_index']))
+    parser.add_argument('--action_queue_size', type=int, default=int(config['action_queue_size']))
+
+    args = parser.parse_args()
+
+    return args
+
+
+def script_mapping(env, obs_json: dict) -> np.ndarray:
+    from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
+    from stable_baselines3.common.vec_env import VecVideoRecorder
+    assert isinstance(env, MicroRTSGridModeVecEnv) or isinstance(env, VecVideoRecorder)
+    assert isinstance(obs_json, dict)
+
+    # TODO
+    # from task to action
+    action = sample_action(env)
+
+    return np.array(action)
+
+
+def sample_action(env):
+    import numpy as np
+    from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
+    from stable_baselines3.common.vec_env import VecVideoRecorder
+    assert isinstance(env, MicroRTSGridModeVecEnv) or isinstance(env, VecVideoRecorder)
+
     def softmax(x, axis=None):
         x = x - x.max(axis=axis, keepdims=True)
         y = np.exp(x)
@@ -134,7 +148,46 @@ def sample_action(env: MicroRTSGridModeVecEnv):
     )
     return action
 
+
 def en2zh(query: str, from_lang='en', to_lang='zh') -> str:
+    # youdao 
+    import uuid
+    import requests
+    import hashlib
+    import time
+    import os
+
+    YOUDAO_URL = 'https://openapi.youdao.com/api'
+    APP_KEY = os.getenv('YOUDAO_ID')
+    APP_SECRET = os.getenv('YOUDAO_KEY')
+    
+    def truncate(q):
+        if q is None:
+            return None
+        size = len(q)
+        return q if size <= 20 else q[0:10] + str(size) + q[size - 10:size]
+
+    data = {}
+    data['from'] = 'EN'
+    data['to'] = 'zh-CHS'
+    data['signType'] = 'v3'
+    curtime = str(int(time.time()))
+    data['curtime'] = curtime
+    salt = str(uuid.uuid1())
+    signStr = APP_KEY + truncate(query) + salt + curtime + APP_SECRET
+    sign = hashlib.sha256(signStr.encode('utf-8')).hexdigest()
+    data['appKey'] = APP_KEY
+    data['q'] = query
+    data['salt'] = salt
+    data['sign'] = sign
+    # data['vocabId'] = "您的用户词表ID"
+
+    response = requests.post(YOUDAO_URL, data=data).json()
+    result = response['translation'][0]
+    return result
+
+
+    # baidu fanyi api
     import requests
     import random
     import json
