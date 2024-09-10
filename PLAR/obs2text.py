@@ -73,8 +73,8 @@ def get_json(obs: np.ndarray) -> dict:
 
     # 环境
     data_json['env'] = {}
-    data_json['env']['width'] = obs.shape[0]
-    data_json['env']['height'] = obs.shape[1]
+    data_json['env']['height'] = obs.shape[0]
+    data_json['env']['width'] = obs.shape[1]
 
     index = np.where((obs[:,:,OWNER_NONE_INDEX]==1) & (obs[:,:,UNIT_RESOURCE_INDEX]==1))
     env_resource_location = np.array(index).T
