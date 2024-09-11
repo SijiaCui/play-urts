@@ -159,6 +159,7 @@ def text_2_coa(obs_json: dict, llm_response: str) -> Tuple[List[str], dict]:
     for task in coa_list:
         obs_json = assign_task(obs_json, task)
     
+    print(f"Assigned Task: {obs_json['blue']}")
     print(f"{'*'*10}Text2COA: done{'*'*10}", flush=True)
     return coa_list, obs_json
 

@@ -19,21 +19,21 @@ COA_A_Soldiers = "[Attack Enemy Soldiers]"
 COA_ACTION_SPACE = [COA_H_Mineral, COA_B_Base, COA_B_Barrack, COA_P_Worker, COA_P_Light, COA_P_Heavy, COA_P_Ranged, COA_A_Worker, COA_A_Buildings, COA_A_Soldiers]
 COA_ACTION_SPACE_STR = f"{{{', '.join(COA_ACTION_SPACE)}}}"
 
-TASK_SCRIPT_MAPPING = {
-    COA_H_Mineral: harvest_mineral,
+# TASK_SCRIPT_MAPPING = {
+#     COA_H_Mineral: harvest_mineral,
 
-    COA_B_Base: build_base,
-    COA_B_Barrack: build_barrack,
+#     COA_B_Base: build_base,
+#     COA_B_Barrack: build_barrack,
 
-    COA_P_Worker: produce_worker,
-    COA_P_Light: produce_light_soldier,
-    COA_P_Heavy: produce_heavy_soldier,
-    COA_P_Ranged: produce_ranged_soldier,
+#     COA_P_Worker: produce_worker,
+#     COA_P_Light: produce_light_soldier,
+#     COA_P_Heavy: produce_heavy_soldier,
+#     COA_P_Ranged: produce_ranged_soldier,
 
-    COA_A_Worker: attack_enemy_worker,
-    COA_A_Buildings: attack_enemy_buildings,
-    COA_A_Soldiers: attack_enemy_soldiers
-}
+#     COA_A_Worker: attack_enemy_worker,
+#     COA_A_Buildings: attack_enemy_buildings,
+#     COA_A_Soldiers: attack_enemy_soldiers
+# }
 
 # the choosen maps for experiment
 CHOOSEN_MAPS = {
@@ -96,16 +96,256 @@ def load_args():
 
     return args
 
+from typing import List
+def get_nearest(location: tuple, targets: List[dict]):
+    def dist2(l1, l2):
+        return (l1[0] - l2[0])**2 + (l1[1] - l2[1])**2
+    min_i = 0
+    min_dist = 10**10
+    for i in range(len(targets)):
+        cur_dist = dist2(location, targets[i]['location'])
+        if cur_dist < min_dist:
+            min_i = i
+            min_dist = cur_dist
+    return min_i
 
-def script_mapping(env, obs_json: dict) -> np.ndarray:
+
+# def act_move(nd, from_l: tuple, to_l: tuple, am):
+#     directions = np.where(am[MOVE_DIRECT_1:MOVE_DIRECT_2]==1)[0]
+#     if len(directions) == 0:
+#         return False, nd
+#     nd[0] = ACTION_INDEX_MAPPING['move']
+#     if from_l[0] != 0:
+#         if from_l[0] > to_l[0]:
+#             nd[1] = DIRECTION_INDEX_MAPPING['west']
+#         elif from_l[0] == to_l[0]:
+#             nd[1] = DIRECTION_INDEX_MAPPING['east']
+#         return True, nd
+#     else:
+#         if from_l[0] == to_l[0]:
+#             nd[1] = DIRECTION_INDEX_MAPPING['west']
+#         elif from_l[0] < to_l[0]:
+#             nd[1] = DIRECTION_INDEX_MAPPING['east']
+#         return True, nd
+
+
+def act_move_autosearch(valid_map: np.ndarray, l1: tuple, l2: tuple) -> np.ndarray:
+    if l1 == l2:
+        return None
+    
+    # map2d[i][j]==0 -> there is a obstacle
+    height = len(valid_map)
+    width = len(valid_map[0])
+
+    from queue import Queue
+    bfs_queue = Queue(width * height)
+    visited = np.zeros(valid_map.shape)
+    # location:tuple, distance:int, first_step_direction:str
+    r = (l1, 0, None)
+    bfs_queue.put(r)
+    visited[l1] = 1
+    while not bfs_queue.empty():
+        item = bfs_queue.get()
+        # print(item)
+        item_loc = item[0]
+        if (item_loc[0] - l2[0])**2 + (item_loc[1] - l2[1])**2 == 1:
+            return DIRECTION_INDEX_MAPPING[item[2]]
+        # 0 <= h < height and 0 <= w < width and map2d[h][w]
+        h = item_loc[0] - 1; w = item_loc[1]
+        if 0 <= h < height and not visited[h][w] and valid_map[h][w]:
+            bfs_queue.put(((h,w), item[1] + 1, item[2] if item[2] else 'north'))
+            visited[h][w] = 1
+        h = item_loc[0] + 1; w = item_loc[1]
+        if 0 <= h < height and not visited[h][w] and valid_map[h][w]:
+            bfs_queue.put(((h,w), item[1] + 1, item[2] if item[2] else 'south'))
+            visited[h][w] = 1
+
+        h = item_loc[0]; w = item_loc[1] - 1
+        if 0 <= w < width and not visited[h][w] and valid_map[h][w]:
+            bfs_queue.put(((h,w), item[1] + 1, item[2] if item[2] else 'west'))
+            visited[h][w] = 1
+        h = item_loc[0]; w = item_loc[1] + 1
+        if 0 <= w < width and not visited[h][w] and valid_map[h][w]:
+            bfs_queue.put(((h,w), item[1] + 1, item[2] if item[2] else 'east'))
+            visited[h][w] = 1
+    
+    return None
+
+
+def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
     from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
     from stable_baselines3.common.vec_env import VecVideoRecorder
     assert isinstance(env, MicroRTSGridModeVecEnv) or isinstance(env, VecVideoRecorder)
     assert isinstance(obs_json, dict)
 
-    # TODO
-    # from task to action
-    action = sample_action(env)
+    height = obs_json['env']['height']
+    width = obs_json['env']['width']
+    action_mask = env.get_action_mask()
+    action_mask = action_mask.reshape(-1, action_mask.shape[-1])
+
+    # generate a valid map that indicates that grid is valid to be moved on
+    obs = obs.reshape((height, width, -1))
+    valid_map = np.zeros(shape=(height, width))
+    valid_map[np.where(obs[:,:,13]==1)] = 1 # UNIT_NONE_INDEX
+
+    action = np.zeros((len(action_mask), 7), dtype=int)
+    # action space: noop/move/harvest/return/produce/attack
+
+    # action for bases: noop, produce
+    for i in range(len(obs_json[FIGHT_FOR]['base'])):
+        base = obs_json[FIGHT_FOR]['base'][i]
+        
+        task = base['task']
+        location: tuple = base['location']
+        index = location[0] * width + location[1]
+
+        # the current action
+        if base['action'] == 'produce':
+            print(f"Base{str(location)}: current action: {base['action']}")
+        elif task == COA_P_Worker:
+            # produce worker action
+            if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['produce']] == 1:
+                directions = np.where(action_mask[index][PRODUCE_DIRECT_1:PRODUCE_DIRECT_2]==1)[0]
+                if len(directions) == 0:
+                    print(f"Base{str(location)}: can't {task}, no available produce direction")
+                    continue
+
+                # action type: produce
+                action[index][0] = ACTION_INDEX_MAPPING['produce']
+                # produce direction: sample one
+                action[index][4] = 0 if len(obs_json[FIGHT_FOR]['worker']) == 1 else np.random.choice(directions) # TODO
+                # produce unit type: worker
+                action[index][5] = PRODUCE_UNIT_INDEX_MAPPING['worker']
+                print(f"Base{str(location)}: {task}")
+            else:
+                print(f"Base{str(location)}: can't {task}, skipped")
+        else:
+            # no task
+            print(f"Base{str(location)}: do nothing")
+
+
+    # action for barracks: noop/produce
+    for i in range(len(obs_json[FIGHT_FOR]['barrack'])):
+        barrack = obs_json[FIGHT_FOR]['barrack'][i]
+        
+        task = barrack['task']
+        location: tuple = barrack['location']
+        index = location[0] * width + location[1]
+
+        # the current action
+        if barrack['action'] == 'produce':
+            print(f"Barrack{str(location)}: current action: {barrack['action']}")
+        elif task == COA_P_Light or task == COA_P_Heavy or task == COA_P_Ranged:
+            # produce soldiers action
+            if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['produce']] == 1:
+                directions = np.where(action_mask[index][PRODUCE_DIRECT_1:PRODUCE_DIRECT_2]==1)[0]
+                if len(directions) == 0:
+                    print(f"Barrack{str(location)}: can't {task}, no available produce direction")
+                    continue
+
+                # action type: produce
+                action[index][0] = ACTION_INDEX_MAPPING['produce']
+                # produce direction: sample one
+                action[index][4] = np.random.choice(directions)
+                # produce unit type: light/heavy/ranged
+                if task == COA_P_Light:
+                    action[index][5] = PRODUCE_UNIT_INDEX_MAPPING['light']
+                elif task == COA_P_Heavy:
+                    action[index][5] = PRODUCE_UNIT_INDEX_MAPPING['heavy']
+                else:
+                    action[index][5] = PRODUCE_UNIT_INDEX_MAPPING['ranged']
+                
+                print(f"Barrack{str(location)}: {task}")
+            else:
+                print(f"Barrack{str(location)}: can't {task}, skipped")
+        else:
+            # no task
+            print(f"Barrack{str(location)}: do nothing")
+
+
+    # action for workers: noop/move/harvest/return/produce/attack
+    for i in range(len(obs_json[FIGHT_FOR]['worker'])):
+        worker = obs_json[FIGHT_FOR]['worker'][i]
+        
+        task = worker['task']
+        location: tuple = worker['location']
+        index = location[0] * width + location[1]
+
+        # the current action
+        if worker['action'] != 'noop':
+            print(f"Worker{str(location)}: current action: {worker['action']}")
+            continue
+
+        carrying_resources = worker['resource_num']
+
+        if task == COA_H_Mineral:
+            # worker harvest mineral
+            if carrying_resources == 0:
+                # if not carrying the resource, to harvest
+                if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['harvest']] == 1:
+                    directions = np.where(action_mask[index][HARVEST_DIRECT_1:HARVEST_DIRECT_2]==1)[0]
+                    if len(directions) == 0:
+                        print(f"Worker{str(location)}: can't {task}/harvesting, no available harvest direction")
+                        continue
+                    print(f"Worker{str(location)}: {task}/harvesting")
+                    # action type: harvest
+                    action[index][0] = ACTION_INDEX_MAPPING['harvest']
+                    # harvest direction: sample one
+                    action[index][2] = np.random.choice(directions)
+                elif action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['move']] == 1:
+                    targets = obs_json['env']['resource']
+                    if len(targets) == 0:
+                        print(f"Worker{str(location)}: can't {task}/moving to mineral, no available mineral")
+                        continue
+                    # get nearest mineral
+                    nm_index = get_nearest(location, targets)
+                    nm_location = targets[nm_index]['location']
+                    print(f"Worker{str(location)}: {task}/moving to nearest mineral{nm_location}")
+                    # action: move
+                    action[index][0] = ACTION_INDEX_MAPPING['move']
+                    action[index][1] = act_move_autosearch(valid_map, location, nm_location)
+                else:
+                    do_nothing = True
+            else:
+                # carrying the resource, to return
+                if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['return']] == 1:
+                    directions = np.where(action_mask[index][RETURN_DIRECT_1:RETURN_DIRECT_2]==1)[0]
+                    if len(directions) == 0:
+                        print(f"Worker{str(location)}: can't {task}/returning, no available return direction")
+                        continue
+                    # action type: return
+                    action[index][0] = ACTION_INDEX_MAPPING['return']
+                    # return direction: sample one
+                    action[index][3] = np.random.choice(directions)
+                    print(f"Worker{str(location)}: {task}/returning")
+                elif action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['move']] == 1:
+                    targets = obs_json[FIGHT_FOR]['base']
+                    if len(targets) == 0:
+                        print(f"Worker{str(location)}: can't {task}/moving to base, no available base")
+                        continue
+                    # get nearest mineral
+                    nb_index = get_nearest(location, targets)
+                    nb_location = targets[nb_index]['location']
+                    print(f"Worker{str(location)}: {task}/moving to nearest base{nb_location}")
+                    # action: move
+                    action[index][0] = ACTION_INDEX_MAPPING['move']
+                    action[index][1] = act_move_autosearch(valid_map, location, nb_location)
+                else:
+                    do_nothing = True
+        elif task == COA_B_Base:
+            # worker build base
+            pass
+        elif task == COA_B_Barrack:
+            # worker build barrack
+            pass
+        else:
+            # no task
+            print(f"Worker{str(location)}: do nothing")
+
+
+    # # TODO
+    # # from task to action
+    # action = sample_action(env)
 
     return np.array(action)
 
