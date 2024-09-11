@@ -453,10 +453,10 @@ def obs_2_text(obs: np.ndarray, zh=False) -> Tuple[str, dict]:
         dict: json type observation
     '''
     print(f"{'*'*10}Obs2Text: running{'*'*10}", flush=True)
-    map_width = obs.shape[2]
     map_height = obs.shape[1]
+    map_width = obs.shape[2]
     text = ''
-    obs = obs.reshape((map_width, map_height, -1))
+    obs = obs.reshape((map_height, map_width, -1))
     
     data = get_json(obs)
     print(data)
