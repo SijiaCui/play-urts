@@ -96,42 +96,52 @@ def load_args():
 
     return args
 
+
+def distance(l1, l2) -> int:
+    assert len(l1) == len(l2)
+    return sum([abs(l1[i] - l2[i]) for i in range(len(l1))])
+
+
+def go_to(l1, l2) -> str:
+    assert l1 != l2
+    if l2[0] < l1[0]: return 'north'
+    if l2[0] > l1[0]: return 'south'
+    if l2[1] < l1[1]: return 'west'
+    if l2[1] > l1[1]: return 'east'
+    return None
+
+
 from typing import List
 def get_nearest(location: tuple, targets: List[dict]):
-    def dist2(l1, l2):
-        return (l1[0] - l2[0])**2 + (l1[1] - l2[1])**2
     min_i = 0
     min_dist = 10**10
     for i in range(len(targets)):
-        cur_dist = dist2(location, targets[i]['location'])
+        cur_dist = distance(location, targets[i]['location'])
         if cur_dist < min_dist:
             min_i = i
             min_dist = cur_dist
     return min_i
 
 
-# def act_move(nd, from_l: tuple, to_l: tuple, am):
-#     directions = np.where(am[MOVE_DIRECT_1:MOVE_DIRECT_2]==1)[0]
-#     if len(directions) == 0:
-#         return False, nd
-#     nd[0] = ACTION_INDEX_MAPPING['move']
-#     if from_l[0] != 0:
-#         if from_l[0] > to_l[0]:
-#             nd[1] = DIRECTION_INDEX_MAPPING['west']
-#         elif from_l[0] == to_l[0]:
-#             nd[1] = DIRECTION_INDEX_MAPPING['east']
-#         return True, nd
-#     else:
-#         if from_l[0] == to_l[0]:
-#             nd[1] = DIRECTION_INDEX_MAPPING['west']
-#         elif from_l[0] < to_l[0]:
-#             nd[1] = DIRECTION_INDEX_MAPPING['east']
-#         return True, nd
+def build_place_invalid(obs, valid_map):
+    np.where(obs[:,:,13]==1)
+    # TODO 可能存在建房子挡路的情况
+    return valid_map
+    pass
 
 
-def act_move_autosearch(valid_map: np.ndarray, l1: tuple, l2: tuple) -> np.ndarray:
+from typing import Tuple, List
+def act_move_autosearch(valid_map: np.ndarray, l1: tuple, l2: tuple) -> Tuple[int, int]:
+    """
+    Input: valid_map, l1, l2
+    Output: 
+        int: the length of valid shortest path from l1 to l2
+        int: the available direction of the first step
+    """
     if l1 == l2:
         return None
+    elif distance(l1, l2) == 1:
+        return 1, go_to(l1, l2)
     
     # map2d[i][j]==0 -> there is a obstacle
     height = len(valid_map)
@@ -148,8 +158,8 @@ def act_move_autosearch(valid_map: np.ndarray, l1: tuple, l2: tuple) -> np.ndarr
         item = bfs_queue.get()
         # print(item)
         item_loc = item[0]
-        if (item_loc[0] - l2[0])**2 + (item_loc[1] - l2[1])**2 == 1:
-            return DIRECTION_INDEX_MAPPING[item[2]]
+        if distance(item_loc, l2) == 1:
+            return item[1] + 1, DIRECTION_INDEX_MAPPING[item[2]]
         # 0 <= h < height and 0 <= w < width and map2d[h][w]
         h = item_loc[0] - 1; w = item_loc[1]
         if 0 <= h < height and not visited[h][w] and valid_map[h][w]:
@@ -172,6 +182,16 @@ def act_move_autosearch(valid_map: np.ndarray, l1: tuple, l2: tuple) -> np.ndarr
     return None
 
 
+def where_to_build_barrack() -> tuple:
+    # TODO 在哪里建造
+    return (3,2)
+
+
+def which_target_to_attack(obs_json):
+    # TODO 攻击哪个目标
+    return obs_json[ENEMY]['worker'][0]
+
+
 def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
     from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
     from stable_baselines3.common.vec_env import VecVideoRecorder
@@ -187,6 +207,7 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
     obs = obs.reshape((height, width, -1))
     valid_map = np.zeros(shape=(height, width))
     valid_map[np.where(obs[:,:,13]==1)] = 1 # UNIT_NONE_INDEX
+    valid_map = build_place_invalid(obs, valid_map)
 
     action = np.zeros((len(action_mask), 7), dtype=int)
     # action space: noop/move/harvest/return/produce/attack
@@ -278,6 +299,7 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
 
         carrying_resources = worker['resource_num']
 
+        do_nothing = False
         if task == COA_H_Mineral:
             # worker harvest mineral
             if carrying_resources == 0:
@@ -303,7 +325,7 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
                     print(f"Worker{str(location)}: {task}/moving to nearest mineral{nm_location}")
                     # action: move
                     action[index][0] = ACTION_INDEX_MAPPING['move']
-                    action[index][1] = act_move_autosearch(valid_map, location, nm_location)
+                    action[index][1] = act_move_autosearch(valid_map, location, nm_location)[1]
                 else:
                     do_nothing = True
             else:
@@ -323,26 +345,79 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
                     if len(targets) == 0:
                         print(f"Worker{str(location)}: can't {task}/moving to base, no available base")
                         continue
-                    # get nearest mineral
+                    # get nearest base
                     nb_index = get_nearest(location, targets)
                     nb_location = targets[nb_index]['location']
                     print(f"Worker{str(location)}: {task}/moving to nearest base{nb_location}")
                     # action: move
                     action[index][0] = ACTION_INDEX_MAPPING['move']
-                    action[index][1] = act_move_autosearch(valid_map, location, nb_location)
+                    action[index][1] = act_move_autosearch(valid_map, location, nb_location)[1]
                 else:
                     do_nothing = True
         elif task == COA_B_Base:
             # worker build base
+            # TODO: if exists base, pass
+            if len(obs_json[FIGHT_FOR]['base']):
+                do_nothing = True
             pass
         elif task == COA_B_Barrack:
             # worker build barrack
-            pass
+            # TODO: if exists barrack, pass
+            if len(obs_json[FIGHT_FOR]['barrack']):
+                do_nothing = True
+            else:
+                # build a barrack
+                bk_location = where_to_build_barrack()
+                if distance(location, bk_location) == 1:
+                    if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['produce']] == 1:
+                        print(f"Worker{str(location)}: {task}/building Barrack{bk_location}")
+                        # action: produce barrack
+                        action[index][0] = ACTION_INDEX_MAPPING['produce']
+                        action[index][4] = DIRECTION_INDEX_MAPPING[go_to(location, bk_location)]
+                        action[index][5] = PRODUCE_UNIT_INDEX_MAPPING['barrack']
+                    else:
+                        # arrival but cant produce
+                        do_nothing = True
+                elif action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['move']] == 1:
+                    print(f"Worker{str(location)}: {task}/moving to building place {bk_location}")
+                    # action: move
+                    action[index][0] = ACTION_INDEX_MAPPING['move']
+                    action[index][1] = act_move_autosearch(valid_map, location, bk_location)[1]
+        elif task == COA_A_Worker:
+            # select target
+            target = which_target_to_attack(obs_json)
+            tg_location = target['location']
+            shortest_path, direction = act_move_autosearch(valid_map, location, tg_location)
+            if shortest_path == 1:
+                if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['attack']] == 1:
+                    print(f"Worker{str(location)}: {task}/attacking enemy Worker{tg_location}")
+                    # action: acttack
+                    action[index][0] = ACTION_INDEX_MAPPING['attack']
+                    # if obs[location[0]]
+                    action[index][6] = (tg_location[0] - location[0] + 3) * 7 + (tg_location[1] - location[1] + 3)
+                else:
+                    print(f"Worker{str(location)}: can't {task}/attacking enemy Worker{tg_location}, NOTCLEAR")
+            else:
+                #TODO
+            # elif shortest_path == 2:
+            #     # stay by
+            #     do_nothing = True
+            # elif shortest_path > 2:
+                if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['move']] == 1:
+                    print(f"Worker{str(location)}: {task}/closing to enemy Worker{tg_location}")
+                    # action: move
+                    action[index][0] = ACTION_INDEX_MAPPING['move']
+                    action[index][1] = direction
+                else:
+                    print(f"Worker{str(location)}: can't {task}/closing to enemy Worker{tg_location}")
         else:
             # no task
             print(f"Worker{str(location)}: do nothing")
+        
+        if do_nothing:
+            print(f"Worker{str(location)}: do nothing")
 
-
+    
     # # TODO
     # # from task to action
     # action = sample_action(env)

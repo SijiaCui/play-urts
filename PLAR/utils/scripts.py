@@ -2,6 +2,7 @@ import numpy as np
 from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
 
 FIGHT_FOR = 'blue'
+ENEMY = 'red'
 
 ACTION_TYPE_1 = 0
 ACTION_TYPE_2 = 6

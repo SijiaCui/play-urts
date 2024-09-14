@@ -97,11 +97,15 @@ def assign_task(obs_json: dict, task: str) -> dict:
     def a_worker(obs, task) -> dict:
         is_assigned = -1
 
-        # num_worker = len(obs[FIGHT_FOR]['worker'])
+        num_worker = len(obs[FIGHT_FOR]['worker'])
         num_light = len(obs[FIGHT_FOR]['light'])
         num_heavy = len(obs[FIGHT_FOR]['heavy'])
         num_ranged = len(obs[FIGHT_FOR]['ranged'])
         
+        for i in range(num_worker):
+            if obs[FIGHT_FOR]['worker'][i]['action'] == 'noop' and \
+                obs[FIGHT_FOR]['worker'][i]['task'] == 'noop':
+                obs[FIGHT_FOR]['worker'][i]['task'] = task
         for i in range(num_light):
             if obs[FIGHT_FOR]['light'][i]['action'] == 'noop' and \
                 obs[FIGHT_FOR]['light'][i]['task'] == 'noop':
