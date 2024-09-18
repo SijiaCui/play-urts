@@ -97,9 +97,110 @@ def load_args():
     return args
 
 
-def distance(l1, l2) -> int:
+def gene_attack_param(location, tg_location):
+    return (tg_location[0] - location[0] + 3) * 7 + (tg_location[1] - location[1] + 3)
+
+def manhattan_distance(l1, l2) -> int:
     assert len(l1) == len(l2)
     return sum([abs(l1[i] - l2[i]) for i in range(len(l1))])
+
+from typing import Tuple, List
+class path_planning:
+    def __init__(self, valid_map) -> None:
+        self.height = len(valid_map)
+        self.width = len(valid_map[0])
+        self.valid_map = valid_map
+        self.n = self.height * self.width
+
+        self.max_dist = 10**10
+        # 10**10 is disconnected
+        self.shortest_path = [[self.max_dist for _ in range(self.n)] for _ in range(self.n)]
+        self.first_step = [[-1 for _ in range(self.n)] for _ in range(self.n)]
+        self.run()
+
+        # self.shortest_path = [str(i) for i in self.shortest_path]
+        # self.first_step = [str(i) for i in self.first_step]
+        # print('\n'.join(self.shortest_path))
+        # print('\n'.join(self.first_step))
+        # input()
+
+    def run(self):
+        # init 
+        for i in range(self.n):
+            self.shortest_path[i][i] = 0
+            self.first_step[i][i] = -1
+            self._setup_neighbors(i)
+
+        for k in range(self.n):
+            if not self.valid_map[self.index2location(k)]: continue
+            for i in range(self.n):
+                for j in range(self.n):
+                    new_path = self.shortest_path[i][k] + self.shortest_path[k][j]
+                    if self.shortest_path[i][j] > new_path:
+                        self.shortest_path[i][j] = new_path
+                        self.first_step[i][j] = self.first_step[i][k]
+
+    def _setup_neighbors(self, index):
+        # north neighbor
+        if index // self.width - 1 >= 0:
+            self.shortest_path[index][index - self.width] = 1
+            self.first_step[index][index - self.width] = DIRECTION_INDEX_MAPPING['north']
+        # south neighbor
+        if index // self.width + 1 < self.height:
+            self.shortest_path[index][index + self.width] = 1
+            self.first_step[index][index + self.width] = DIRECTION_INDEX_MAPPING['south']
+        
+        # east neighbor
+        if index % self.width + 1 < self.width:
+            self.shortest_path[index][index + 1] = 1
+            self.first_step[index][index + 1] = DIRECTION_INDEX_MAPPING['east']
+        # west neighbor
+        if index % self.width -1 >= 0:
+            self.shortest_path[index][index - 1] = 1
+            self.first_step[index][index - 1] = DIRECTION_INDEX_MAPPING['west']
+
+    def location2index(self, location: tuple) -> int:
+        return location[0] * self.width + location[1]
+
+    def index2location(self, index: int) -> tuple:
+        return (index // self.width, index % self.width)
+
+    def get_shortest_path(self, location, tg_location) -> Tuple[int, int]:
+        '''
+        output: 
+            int: path length
+            int: direction
+        '''
+        assert location != tg_location, "Two locations should be different"
+        sp = self.shortest_path[self.location2index(location)][self.location2index(tg_location)]
+        fs = self.first_step[self.location2index(location)][self.location2index(tg_location)]
+
+        return sp, fs
+        if sp < self.max_dist:
+            return sp, fs
+        else:
+            # cant find any path
+            return None
+
+    def get_path_nearest(self, location: tuple, targets: List[dict]) -> int:
+        min_i = 0
+        min_path = self.max_dist
+        for i in range(len(targets)):
+            cur_path = self.shortest_path[self.location2index(location)][self.location2index(targets[i]['location'])]
+            if cur_path < min_path:
+                min_i = i
+                min_path = cur_path
+        return min_i
+
+    def get_manhattan_nearest(self, location: tuple, targets: List[dict]) -> int:
+        min_i = 0
+        min_dist = self.max_dist
+        for i in range(len(targets)):
+            cur_dist = manhattan_distance(location, targets[i]['location'])
+            if cur_dist < min_dist:
+                min_i = i
+                min_dist = cur_dist
+        return min_i
 
 
 def go_to(l1, l2) -> str:
@@ -111,17 +212,6 @@ def go_to(l1, l2) -> str:
     return None
 
 
-from typing import List
-def get_nearest(location: tuple, targets: List[dict]):
-    min_i = 0
-    min_dist = 10**10
-    for i in range(len(targets)):
-        cur_dist = distance(location, targets[i]['location'])
-        if cur_dist < min_dist:
-            min_i = i
-            min_dist = cur_dist
-    return min_i
-
 
 def build_place_invalid(obs, valid_map):
     np.where(obs[:,:,13]==1)
@@ -129,8 +219,8 @@ def build_place_invalid(obs, valid_map):
     return valid_map
     pass
 
+''' TODO Deprecated Functions
 
-from typing import Tuple, List
 def act_move_autosearch(valid_map: np.ndarray, l1: tuple, l2: tuple) -> Tuple[int, int]:
     """
     Input: valid_map, l1, l2
@@ -180,14 +270,14 @@ def act_move_autosearch(valid_map: np.ndarray, l1: tuple, l2: tuple) -> Tuple[in
             visited[h][w] = 1
     
     return None
-
+'''
 
 def where_to_build_barrack() -> tuple:
     # TODO 在哪里建造
     return (3,2)
 
 
-def which_target_to_attack(obs_json):
+def which_target_to_attack(valid_map: np.ndarray, l1: tuple, target_name='worker', mode=0):
     # TODO 攻击哪个目标
     return obs_json[ENEMY]['worker'][0]
 
@@ -208,7 +298,9 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
     valid_map = np.zeros(shape=(height, width))
     valid_map[np.where(obs[:,:,13]==1)] = 1 # UNIT_NONE_INDEX
     valid_map = build_place_invalid(obs, valid_map)
-
+    
+    path_planer = path_planning(valid_map)
+    
     action = np.zeros((len(action_mask), 7), dtype=int)
     # action space: noop/move/harvest/return/produce/attack
 
@@ -320,12 +412,12 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
                         print(f"Worker{str(location)}: can't {task}/moving to mineral, no available mineral")
                         continue
                     # get nearest mineral
-                    nm_index = get_nearest(location, targets)
+                    nm_index = path_planer.get_manhattan_nearest(location, targets)
                     nm_location = targets[nm_index]['location']
                     print(f"Worker{str(location)}: {task}/moving to nearest mineral{nm_location}")
                     # action: move
                     action[index][0] = ACTION_INDEX_MAPPING['move']
-                    action[index][1] = act_move_autosearch(valid_map, location, nm_location)[1]
+                    action[index][1] = path_planer.get_shortest_path(location, nm_location)[1]
                 else:
                     do_nothing = True
             else:
@@ -346,12 +438,12 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
                         print(f"Worker{str(location)}: can't {task}/moving to base, no available base")
                         continue
                     # get nearest base
-                    nb_index = get_nearest(location, targets)
+                    nb_index = path_planer.get_manhattan_nearest(location, targets)
                     nb_location = targets[nb_index]['location']
                     print(f"Worker{str(location)}: {task}/moving to nearest base{nb_location}")
                     # action: move
                     action[index][0] = ACTION_INDEX_MAPPING['move']
-                    action[index][1] = act_move_autosearch(valid_map, location, nb_location)[1]
+                    action[index][1] = path_planer.get_shortest_path(location, nb_location)[1]
                 else:
                     do_nothing = True
         elif task == COA_B_Base:
@@ -368,7 +460,7 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
             else:
                 # build a barrack
                 bk_location = where_to_build_barrack()
-                if distance(location, bk_location) == 1:
+                if manhattan_distance(location, bk_location) == 1:
                     if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['produce']] == 1:
                         print(f"Worker{str(location)}: {task}/building Barrack{bk_location}")
                         # action: produce barrack
@@ -382,19 +474,21 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
                     print(f"Worker{str(location)}: {task}/moving to building place {bk_location}")
                     # action: move
                     action[index][0] = ACTION_INDEX_MAPPING['move']
-                    action[index][1] = act_move_autosearch(valid_map, location, bk_location)[1]
+                    action[index][1] = path_planer.get_shortest_path(location, bk_location)[1]
         elif task == COA_A_Worker:
             # select target
-            target = which_target_to_attack(obs_json)
-            tg_location = target['location']
-            shortest_path, direction = act_move_autosearch(valid_map, location, tg_location)
+            if not len(obs_json[ENEMY]['worker']): continue # NO worker to attack
+            targets = obs_json[ENEMY]['worker']
+            target = path_planer.get_path_nearest(location, targets)
+            tg_location = obs_json[ENEMY]['worker'][target]['location']
+            shortest_path, direction = path_planer.get_shortest_path(location, tg_location)
             if shortest_path == 1:
                 if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['attack']] == 1:
                     print(f"Worker{str(location)}: {task}/attacking enemy Worker{tg_location}")
                     # action: acttack
                     action[index][0] = ACTION_INDEX_MAPPING['attack']
                     # if obs[location[0]]
-                    action[index][6] = (tg_location[0] - location[0] + 3) * 7 + (tg_location[1] - location[1] + 3)
+                    action[index][6] = gene_attack_param(location, tg_location)
                 else:
                     print(f"Worker{str(location)}: can't {task}/attacking enemy Worker{tg_location}, NOTCLEAR")
             else:

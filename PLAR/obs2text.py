@@ -75,6 +75,12 @@ def get_json(obs: np.ndarray) -> dict:
     data_json['env'] = {}
     data_json['env']['height'] = obs.shape[0]
     data_json['env']['width'] = obs.shape[1]
+    data_json['blue'] = {}
+    data_json['red'] = {}
+    data_json['units'] = {}
+    for i in range(data_json['env']['height']):
+        for j in range(data_json['env']['width']):
+            data_json['units'][(i,j)] = {}
 
     index = np.where((obs[:,:,OWNER_NONE_INDEX]==1) & (obs[:,:,UNIT_RESOURCE_INDEX]==1))
     env_resource_location = np.array(index).T
@@ -94,6 +100,12 @@ def get_json(obs: np.ndarray) -> dict:
                 'resource_num':resource_num
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "env.resource",
+            'location': location,
+            'resource_num':resource_num
+        }
 
     # 蓝方情况
     data_json['blue'] = {}
@@ -116,6 +128,15 @@ def get_json(obs: np.ndarray) -> dict:
                 'task': 'noop'
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "blue.base",
+            'location': location,
+            'hp': hp,
+            'resource_num': resource_num,
+            'action': ACTION_MAP[str(action)],
+            'task': 'noop'
+        }
     # 蓝方兵营: location, hp, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_BARRACK_INDEX]==1)
     blue_barrack = obs[index]
@@ -133,6 +154,14 @@ def get_json(obs: np.ndarray) -> dict:
                 'task': 'noop'
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "blue.barrack",
+            'location': location,
+            'hp': hp,
+            'action': ACTION_MAP[str(action)],
+            'task': 'noop'
+        }
     # 蓝方工人: location, hp, resource_num, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_WORKER_INDEX]==1)
     blue_worker = obs[index]
@@ -152,6 +181,15 @@ def get_json(obs: np.ndarray) -> dict:
                 'task': 'noop'
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "blue.worker",
+            'location': location,
+            'hp': hp,
+            'resource_num': resource_num,
+            'action': ACTION_MAP[str(action)],
+            'task': 'noop'
+        }
     # 蓝方light: location, hp, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_LIGHT_INDEX]==1)
     blue_light = obs[index]
@@ -169,6 +207,14 @@ def get_json(obs: np.ndarray) -> dict:
                 'task': 'noop'
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "blue.light",
+            'location': location,
+            'hp': hp,
+            'action': ACTION_MAP[str(action)],
+            'task': 'noop'
+        }
     # 蓝方重型士兵: location, hp, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_HEAVY_INDEX]==1)
     blue_heavy = obs[index]
@@ -186,6 +232,14 @@ def get_json(obs: np.ndarray) -> dict:
                 'task': 'noop'
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "blue.heavy",
+            'location': location,
+            'hp': hp,
+            'action': ACTION_MAP[str(action)],
+            'task': 'noop'
+        }
     # 蓝方远程士兵: location, hp, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_RANGED_INDEX]==1)
     blue_ranged = obs[index]
@@ -203,6 +257,14 @@ def get_json(obs: np.ndarray) -> dict:
                 'task': 'noop'
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "blue.ranged",
+            'location': location,
+            'hp': hp,
+            'action': ACTION_MAP[str(action)],
+            'task': 'noop'
+        }
 
     # 红方情况
     data_json['red'] = {}
@@ -224,6 +286,14 @@ def get_json(obs: np.ndarray) -> dict:
                 'action': ACTION_MAP[str(action)]
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "red.base",
+            'location': location,
+            'hp': hp,
+            'resource_num': resource_num,
+            'action': ACTION_MAP[str(action)]
+        }
     # 红方兵营: location, hp, action
     index = np.where((obs[:,:,OWNER_RED_INDEX]==1) & obs[:,:,UNIT_BARRACK_INDEX]==1)
     red_barrack = obs[index]
@@ -240,6 +310,13 @@ def get_json(obs: np.ndarray) -> dict:
                 'action': ACTION_MAP[str(action)]
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "red.barrack",
+            'location': location,
+            'hp': hp,
+            'action': ACTION_MAP[str(action)]
+        }
     # 红方工人: location, hp, resource_num, action
     index = np.where((obs[:,:,OWNER_RED_INDEX]==1) & obs[:,:,UNIT_WORKER_INDEX]==1)
     red_worker = obs[index]
@@ -258,6 +335,14 @@ def get_json(obs: np.ndarray) -> dict:
                 'action': ACTION_MAP[str(action)]
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "red.worker",
+            'location': location,
+            'hp': hp,
+            'resource_num': resource_num,
+            'action': ACTION_MAP[str(action)]
+        }
     # 红方light: location, hp, action
     index = np.where((obs[:,:,OWNER_RED_INDEX]==1) & obs[:,:,UNIT_LIGHT_INDEX]==1)
     red_light = obs[index]
@@ -274,6 +359,13 @@ def get_json(obs: np.ndarray) -> dict:
                 'action': ACTION_MAP[str(action)]
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "red.light",
+            'location': location,
+            'hp': hp,
+            'action': ACTION_MAP[str(action)]
+        }
     # 红方重型士兵: location, hp, action
     index = np.where((obs[:,:,OWNER_RED_INDEX]==1) & obs[:,:,UNIT_HEAVY_INDEX]==1)
     red_heavy = obs[index]
@@ -290,6 +382,13 @@ def get_json(obs: np.ndarray) -> dict:
                 'action': ACTION_MAP[str(action)]
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "red.heavy",
+            'location': location,
+            'hp': hp,
+            'action': ACTION_MAP[str(action)]
+        }
     # 红方远程士兵: location, hp, action
     index = np.where((obs[:,:,OWNER_RED_INDEX]==1) & obs[:,:,UNIT_RANGED_INDEX]==1)
     red_ranged = obs[index]
@@ -306,6 +405,13 @@ def get_json(obs: np.ndarray) -> dict:
                 'action': ACTION_MAP[str(action)]
             }
         )
+        # location index to query unit information
+        data_json['units'][location] = {
+            'name': "red.ranged",
+            'location': location,
+            'hp': hp,
+            'action': ACTION_MAP[str(action)]
+        }
 
     return data_json
 
@@ -462,7 +568,10 @@ def obs_2_text(obs: np.ndarray, zh=False) -> Tuple[str, dict]:
     print(data)
 
     with open('data.json', 'w') as f:
-        f.write(json.dumps(data))
+        writable_data = data
+        # key with tuple type cant be dumped
+        writable_data['units'] = dict((str(k), v) for k,v in data['units'].items())
+        f.write(json.dumps(writable_data))
 
     # env
     text_env = get_env_text(data['env'])

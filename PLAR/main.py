@@ -58,7 +58,7 @@ START of COA
 1. [Harvest Mineral
 2. [Build Base
 3. [Build Barrack
-4. [Produce Worker
+4. [Produce Worker]
 5. [Produce Light Soldier
 6. [Produce Heavy Soldier
 7. [Produce Ranged Soldier

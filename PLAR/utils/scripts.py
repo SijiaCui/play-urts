@@ -193,7 +193,7 @@ if __name__ == "__main__":
     env = VecVideoRecorder(env, "videos", record_video_trigger=lambda x: True, video_length=200, name_prefix=name_prefix)
     obs = env.reset()
 
-    for i in range(200):
+    for index in range(200):
         env.render()
         from PLAR.obs2text import obs_2_text
         obs_text, obs_json = obs_2_text(obs)
