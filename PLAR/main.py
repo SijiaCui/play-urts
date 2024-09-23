@@ -5,7 +5,7 @@ from PLAR.llm_agent import coa_agent
 from PLAR.utils.utils import load_args, CHOOSEN_MAPS, script_mapping
 
 from PLAR.obs2text import obs_2_text
-from PLAR.text2coa import text_2_coa
+from PLAR.text2coa import text_2_coa, subtask_assignment
 
 # import env and AI bots
 from gym_microrts import microrts_ai
@@ -28,7 +28,7 @@ def main():
     args = load_args()
     ca = coa_agent(args)
 
-    map_name = CHOOSEN_MAPS['2']
+    map_name = CHOOSEN_MAPS['3']
     env = MicroRTSGridModeVecEnv(
         num_selfplay_envs=0,
         num_bot_envs=1,
@@ -46,29 +46,33 @@ def main():
 
     obs = env.reset()
     
-    for i in range(1000):
+    for i in range(600):
         print(f"{'#'*20}step-{i}{'#'*20}")
         obs_text, obs_json = obs_2_text(obs)
         # print_ai_info(i, obs, obs_json)
 
         if i % 100 == 0:
-            # response = ca.run(obs_text)
-            response = f"""
-START of COA
-1. [Harvest Mineral
-2. [Build Base
-3. [Build Barrack
-4. [Produce Worker]
-5. [Produce Light Soldier
-6. [Produce Heavy Soldier
-7. [Produce Ranged Soldier
-8. [Attack Enemy Worker]
-9. [Attack Enemy Buildings
-10. [Attack Enemy Soldiers
-END of COA
-"""
-        coa, obs_json = text_2_coa(obs_json=obs_json, llm_response=response)
-        
+            response = ca.run(obs_text)
+#             response = f"""
+# START of COA
+# 1. [Harvest Mineral]
+# 2. [Build Base
+# 3. [Build Barrack
+# 4. [Produce Worker]
+# 5. [Produce Light Soldier
+# 6. [Produce Heavy Soldier
+# 7. [Produce Ranged Soldier
+# 8. [Attack Enemy Worker]
+# 9. [Attack Enemy Buildings]
+# 10. [Attack Enemy Soldiers
+# END of COA
+# """
+        coa = text_2_coa(obs_json=obs_json, llm_response=response)
+
+        for task in coa:
+            obs_json = subtask_assignment(obs_json, task)
+        print(f"Assigned Task: {obs_json['blue']}")
+
         action = script_mapping(env, obs=obs, obs_json=obs_json)
 
         obs, reward, done, info = env.step(np.array(action))

@@ -82,7 +82,7 @@ def load_args():
     parser.add_argument('--engine', type=str, default=config['llm_engine'])
     parser.add_argument('--temperature', type=float, default=float(config['llm_engine_temperature']))
     parser.add_argument('--max_tokens', type=int, default=int(config['llm_engine_max_tokens']))
-    
+
     # video recorder parameters
     parser.add_argument('--video_fps', type=int, default=int(config['video_fps']))
     parser.add_argument('--video_length', type=int, default=int(config['video_length']))
@@ -91,6 +91,8 @@ def load_args():
     # other parameters
     parser.add_argument('--map_index', type=str, default=str(config['map_index']))
     parser.add_argument('--action_queue_size', type=int, default=int(config['action_queue_size']))
+
+    parser.add_argument('--debug', action='store_true')
 
     args = parser.parse_args()
 
@@ -326,7 +328,8 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
                 # action type: produce
                 action[index][0] = ACTION_INDEX_MAPPING['produce']
                 # produce direction: sample one
-                action[index][4] = 0 if len(obs_json[FIGHT_FOR]['worker']) == 1 else np.random.choice(directions) # TODO
+                action[index][4] = np.random.choice(directions)
+                # action[index][4] = 0 if len(obs_json[FIGHT_FOR]['worker']) == 1 else np.random.choice(directions) # which direction is better? # TODO
                 # produce unit type: worker
                 action[index][5] = PRODUCE_UNIT_INDEX_MAPPING['worker']
                 print(f"Base{str(location)}: {task}")
@@ -388,11 +391,43 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
         if worker['action'] != 'noop':
             print(f"Worker{str(location)}: current action: {worker['action']}")
             continue
+        
+        random_walk = True  # worker: random walk when doing nothing
+        aggressive_units = True   # worker: active attack enemy units
+        aggressive_building = True  # worker: active attack enemy buildings
+        
+        if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['attack']] == 1:
+            enemy_units = obs_json[ENEMY]['worker'] + obs_json[ENEMY]['light'] + obs_json[ENEMY]['heavy'] + obs_json[ENEMY]['ranged']
+            enemy_buildings = obs_json[ENEMY]['base'] + obs_json[ENEMY]['barrack']
 
-        carrying_resources = worker['resource_num']
+            if aggressive_units and len(enemy_units):
+                target = path_planer.get_path_nearest(location, enemy_units)
+                tg_name = enemy_units[target]['type']
+                tg_location = enemy_units[target]['location']
+                if manhattan_distance(location, tg_location) == 1:
+                    # the nearest enemy unit in worker's attack range 
+                    print(f"Worker{str(location)}: aggressive/attacking enemy {tg_name}{tg_location}")
+                    # attack
+                    action[index][0] = ACTION_INDEX_MAPPING['attack']
+                    action[index][6] = gene_attack_param(location, tg_location)
+                    continue
+            
+            # the nearest enemy unit is not in attack range, but some building is
+            if aggressive_building and len(enemy_buildings):
+                target = path_planer.get_path_nearest(location, enemy_buildings)
+                tg_name = enemy_buildings[target]['type']
+                tg_location = enemy_buildings[target]['location']
+                if manhattan_distance(location, tg_location) == 1:
+                    print(f"Worker{str(location)}: aggressive/attacking enemy {tg_name}{tg_location}")
+                    # attack
+                    action[index][0] = ACTION_INDEX_MAPPING['attack']
+                    action[index][6] = gene_attack_param(location, tg_location)
+                    continue
+                assert False, "No Way!"
 
         do_nothing = False
         if task == COA_H_Mineral:
+            carrying_resources = worker['resource_num']
             # worker harvest mineral
             if carrying_resources == 0:
                 # if not carrying the resource, to harvest
@@ -487,16 +522,10 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
                     print(f"Worker{str(location)}: {task}/attacking enemy Worker{tg_location}")
                     # action: acttack
                     action[index][0] = ACTION_INDEX_MAPPING['attack']
-                    # if obs[location[0]]
                     action[index][6] = gene_attack_param(location, tg_location)
                 else:
                     print(f"Worker{str(location)}: can't {task}/attacking enemy Worker{tg_location}, NOTCLEAR")
             else:
-                #TODO
-            # elif shortest_path == 2:
-            #     # stay by
-            #     do_nothing = True
-            # elif shortest_path > 2:
                 if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['move']] == 1:
                     print(f"Worker{str(location)}: {task}/closing to enemy Worker{tg_location}")
                     # action: move
@@ -504,12 +533,46 @@ def script_mapping(env, obs: np.ndarray, obs_json: dict) -> np.ndarray:
                     action[index][1] = direction
                 else:
                     print(f"Worker{str(location)}: can't {task}/closing to enemy Worker{tg_location}")
+        elif task == COA_A_Buildings:
+            buildings = obs_json[ENEMY]['barrack'] + obs_json[ENEMY]['base']
+            # select target
+            if not len(buildings): continue # NO Building to attack
+            target = path_planer.get_path_nearest(location, buildings)
+            tg_name = buildings[target]['type']
+            tg_location = buildings[target]['location']
+            shortest_path, direction = path_planer.get_shortest_path(location, tg_location)
+            if shortest_path == 1:
+                if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['attack']] == 1:
+                    print(f"Worker{str(location)}: {task}/attacking enemy {tg_name}{tg_location}")
+                    # action: attack
+                    action[index][0] = ACTION_INDEX_MAPPING['attack']
+                    action[index][6] = gene_attack_param(location, tg_location)
+                else:
+                    print(f"Worker{str(location)}: can't {task}/attacking enemy {tg_name}{tg_location}, NOTCLEAR")
+            else:
+                if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['move']] == 1:
+                    print(f"Worker{str(location)}: {task}/closing to enemy {tg_name}{tg_location}")
+                    # action: move
+                    action[index][0] = ACTION_INDEX_MAPPING['move']
+                    action[index][1] = direction
+                else:
+                    print(f"Worker{str(location)}: can't {task}/closing to enemy {tg_name}{tg_location}")
+        elif task == COA_A_Soldiers:
+            # TODO
+            pass
         else:
             # no task
-            print(f"Worker{str(location)}: do nothing")
+            do_nothing = True
         
         if do_nothing:
-            print(f"Worker{str(location)}: do nothing")
+            if random_walk:
+                print(f"Worker{str(location)}: patrolling")
+                if action_mask[index][ACTION_TYPE_1 + ACTION_INDEX_MAPPING['move']] == 1:
+                    directions = np.where(action_mask[index][MOVE_DIRECT_1:MOVE_DIRECT_2]==1)[0]
+                    action[index][0] = ACTION_INDEX_MAPPING['move']
+                    action[index][1] = np.random.choice(directions)
+            else:
+                print(f"Worker{str(location)}: do nothing")
 
     
     # # TODO

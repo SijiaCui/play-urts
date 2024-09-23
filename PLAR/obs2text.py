@@ -96,13 +96,16 @@ def get_json(obs: np.ndarray) -> dict:
         resource_num = int(np.where(env_resource[i][RESOURCE_START:RESOURCE_END] > 0)[0])
         data_json['env']['resource'].append(
             {
+                'owner': 'env',
+                'type': 'resource',
                 'location': location,
                 'resource_num':resource_num
             }
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "env.resource",
+            'owner': 'env',
+            'type': 'resource',
             'location': location,
             'resource_num':resource_num
         }
@@ -121,6 +124,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(blue_base[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['blue']['base'].append(
             {
+                'owner': 'blue',
+                'type': 'base',
                 'location': location,
                 'hp': hp,
                 'resource_num': resource_num,
@@ -130,7 +135,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "blue.base",
+            'owner': 'blue',
+            'type': 'base',
             'location': location,
             'hp': hp,
             'resource_num': resource_num,
@@ -148,6 +154,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(blue_barrack[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['blue']['barrack'].append(
             {
+                'owner': 'blue',
+                'type': 'barrack',
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)],
@@ -156,7 +164,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "blue.barrack",
+            'owner': 'blue',
+            'type': 'barrack',
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)],
@@ -174,6 +183,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(blue_worker[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['blue']['worker'].append(
             {
+                'owner': 'blue',
+                'type': 'worker',
                 'location': location,
                 'hp': hp,
                 'resource_num': resource_num,
@@ -183,7 +194,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "blue.worker",
+            'owner': 'blue',
+            'type': 'worker',
             'location': location,
             'hp': hp,
             'resource_num': resource_num,
@@ -201,6 +213,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(blue_light[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['blue']['light'].append(
             {
+                'owner': 'blue',
+                'type': 'light',
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)],
@@ -209,7 +223,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "blue.light",
+            'owner': 'blue',
+            'type': 'light',
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)],
@@ -226,6 +241,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(blue_heavy[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['blue']['heavy'].append(
             {
+                'owner': 'blue',
+                'type': 'heavy',
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)],
@@ -234,7 +251,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "blue.heavy",
+            'owner': 'blue',
+            'type': 'heavy',
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)],
@@ -251,6 +269,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(blue_ranged[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['blue']['ranged'].append(
             {
+                'owner': 'blue',
+                'type': 'ranged',
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)],
@@ -259,7 +279,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "blue.ranged",
+            'owner': 'blue',
+            'type': 'ranged',
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)],
@@ -280,6 +301,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(red_base[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['red']['base'].append(
             {
+                'owner': 'red',
+                'type': 'base',
                 'location': location,
                 'hp': hp,
                 'resource_num': resource_num,
@@ -288,7 +311,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "red.base",
+            'owner': 'red',
+            'type': 'base',
             'location': location,
             'hp': hp,
             'resource_num': resource_num,
@@ -305,6 +329,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(red_barrack[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['red']['barrack'].append(
             {
+                'owner': 'red',
+                'type': 'barrack',
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)]
@@ -312,7 +338,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "red.barrack",
+            'owner': 'red',
+            'type': 'barrack',
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)]
@@ -329,6 +356,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(red_worker[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['red']['worker'].append(
             {
+                'owner': 'red',
+                'type': 'worker',
                 'location': location,
                 'hp': hp,
                 'resource_num': resource_num,
@@ -337,7 +366,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "red.worker",
+            'owner': 'red',
+            'type': 'worker',
             'location': location,
             'hp': hp,
             'resource_num': resource_num,
@@ -354,6 +384,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(red_light[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['red']['light'].append(
             {
+                'owner': 'red',
+                'type': 'light',
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)]
@@ -361,7 +393,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "red.light",
+            'owner': 'red',
+            'type': 'light',
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)]
@@ -377,6 +410,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(red_heavy[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['red']['heavy'].append(
             {
+                'owner': 'red',
+                'type': 'heavy',
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)]
@@ -384,7 +419,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "red.heavy",
+            'owner': 'red',
+            'type': 'heavy',
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)]
@@ -400,6 +436,8 @@ def get_json(obs: np.ndarray) -> dict:
         action = int(np.where(red_ranged[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['red']['ranged'].append(
             {
+                'owner': 'red',
+                'type': 'ranged',
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)]
@@ -407,7 +445,8 @@ def get_json(obs: np.ndarray) -> dict:
         )
         # location index to query unit information
         data_json['units'][location] = {
-            'name': "red.ranged",
+            'owner': 'red',
+            'type': 'ranged',
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)]
@@ -568,7 +607,8 @@ def obs_2_text(obs: np.ndarray, zh=False) -> Tuple[str, dict]:
     print(data)
 
     with open('data.json', 'w') as f:
-        writable_data = data
+        import copy
+        writable_data = copy.deepcopy(data)
         # key with tuple type cant be dumped
         writable_data['units'] = dict((str(k), v) for k,v in data['units'].items())
         f.write(json.dumps(writable_data))

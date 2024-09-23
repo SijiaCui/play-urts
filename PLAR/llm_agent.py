@@ -40,7 +40,7 @@ class coa_agent:
         
 
     def _agent_response(self) -> str:
-        LLM_DEBUG = True
+        LLM_DEBUG = self.args.debug
         if LLM_DEBUG: print(f"{'-'*20}#{self.__class__.__name__} START DEBUGGING#{'-'*20}", flush=True)
         prompt_content = self._agent_prompt()
         if LLM_DEBUG: print(f"PROMPT: {self.prompt.input_variables}\n{prompt_content}", flush=True)

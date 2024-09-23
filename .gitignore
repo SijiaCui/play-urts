@@ -13,3 +13,6 @@ experiments/models/
 gym_microrts/microrts/microrts.jar
 show_maps/
 texts/
+
+main.log
+data.json

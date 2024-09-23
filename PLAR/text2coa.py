@@ -24,7 +24,7 @@ def parse_coa(text: str) -> list:
     return coa_list
 
 
-def assign_task(obs_json: dict, task: str) -> dict:
+def subtask_assignment(obs_json: dict, task: str) -> dict:
     from PLAR.utils.utils import COA_ACTION_SPACE
     assert task in COA_ACTION_SPACE
 
@@ -34,59 +34,59 @@ def assign_task(obs_json: dict, task: str) -> dict:
     
     def h_mineral(obs, task) -> dict:
         # 考虑的因素：哪个worker离mineral的距离近
-        is_assigned = -1
+        assigned = 0
         for i in range(len(obs[FIGHT_FOR]['worker'])):
             if obs[FIGHT_FOR]['worker'][i]['action'] == 'noop' and \
                 obs[FIGHT_FOR]['worker'][i]['task'] == 'noop':
                 obs[FIGHT_FOR]['worker'][i]['task'] = task
-                is_assigned = i
+                assigned += 1
                 break
 
-        return obs, is_assigned
+        return obs
     
     def b_base(obs, task) -> dict:
-        is_assigned = -1
+        assigned = 0
         for i in range(len(obs[FIGHT_FOR]['worker'])):
             if obs[FIGHT_FOR]['worker'][i]['action'] == 'noop' and \
                 obs[FIGHT_FOR]['worker'][i]['task'] == 'noop':
                 obs[FIGHT_FOR]['worker'][i]['task'] = task
-                is_assigned = i
+                assigned += 1
                 break
 
-        return obs, is_assigned
+        return obs
     
     def b_barrack(obs, task) -> dict:
-        is_assigned = -1
+        assigned = 0
         for i in range(len(obs[FIGHT_FOR]['worker'])):
             if obs[FIGHT_FOR]['worker'][i]['action'] == 'noop' and \
                 obs[FIGHT_FOR]['worker'][i]['task'] == 'noop':
                 obs[FIGHT_FOR]['worker'][i]['task'] = task
-                is_assigned = i
+                assigned += 1
                 break
 
-        return obs, is_assigned
+        return obs
     
     def p_worker(obs, task) -> dict:
-        is_assigned = -1
+        assigned = 0
         for i in range(len(obs[FIGHT_FOR]['base'])):
             if obs[FIGHT_FOR]['base'][i]['action'] == 'noop' and \
                 obs[FIGHT_FOR]['base'][i]['task'] == 'noop':
                 obs[FIGHT_FOR]['base'][i]['task'] = task
-                is_assigned = i
+                assigned += 1
                 break
 
-        return obs, is_assigned
+        return obs
 
     def p_light(obs, task) -> dict:
-        is_assigned = -1
+        assigned = 0
         for i in range(len(obs[FIGHT_FOR]['barrack'])):
             if obs[FIGHT_FOR]['barrack'][i]['action'] == 'noop' and \
                 obs[FIGHT_FOR]['barrack'][i]['task'] == 'noop':
                 obs[FIGHT_FOR]['barrack'][i]['task'] = task
-                is_assigned = i
+                assigned += 1
                 break
 
-        return obs, is_assigned
+        return obs
     
     def p_heavy(obs, task) -> dict:
         return p_light(obs, task)
@@ -95,7 +95,7 @@ def assign_task(obs_json: dict, task: str) -> dict:
         return p_light(obs, task)
     
     def a_worker(obs, task) -> dict:
-        is_assigned = -1
+        assigned = 0
 
         num_worker = len(obs[FIGHT_FOR]['worker'])
         num_light = len(obs[FIGHT_FOR]['light'])
@@ -119,7 +119,7 @@ def assign_task(obs_json: dict, task: str) -> dict:
                 obs[FIGHT_FOR]['ranged'][i]['task'] == 'noop':
                 obs[FIGHT_FOR]['ranged'][i]['task'] = task
 
-        return obs, is_assigned
+        return obs
     
     def a_buildings(obs, task) -> dict:
         return a_worker(obs, task)
@@ -140,7 +140,7 @@ def assign_task(obs_json: dict, task: str) -> dict:
         COA_A_Soldiers: a_soldiers
     }
     
-    obs_json: dict = TASK_ASSIGNMENT_MAP[task](obs_json, task)[0]
+    obs_json: dict = TASK_ASSIGNMENT_MAP[task](obs_json, task)
     return obs_json
 
 
@@ -159,13 +159,13 @@ def text_2_coa(obs_json: dict, llm_response: str) -> Tuple[List[str], dict]:
     coa_list = parse_coa(llm_response)
     print(f"Parsed COA: {coa_list}")
 
-    # task assignment
-    for task in coa_list:
-        obs_json = assign_task(obs_json, task)
-    
-    print(f"Assigned Task: {obs_json['blue']}")
+    # # task assignment
+    # for task in coa_list:
+    #     obs_json = assign_task(obs_json, task)
+    # print(f"Assigned Task: {obs_json['blue']}")
+
     print(f"{'*'*10}Text2COA: done{'*'*10}", flush=True)
-    return coa_list, obs_json
+    return coa_list
 
 
 def test_text_2_coa():
