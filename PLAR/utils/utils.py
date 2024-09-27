@@ -106,6 +106,20 @@ def manhattan_distance(l1, l2) -> int:
     assert len(l1) == len(l2)
     return sum([abs(l1[i] - l2[i]) for i in range(len(l1))])
 
+
+def get_direction(location, tgt_loc) -> str:
+    if tgt_loc[0] > location[0]:
+        return "south"
+    elif tgt_loc[0] < location[0]:
+        return "north"
+    elif tgt_loc[1] > location[1]:
+        return "east"
+    elif tgt_loc[1] < location[1]:
+        return "west"
+    else:
+        return "I only live in two dimensions."
+
+
 from typing import Tuple, List
 class path_planning:
     def __init__(self, valid_map) -> None:
@@ -212,7 +226,6 @@ def go_to(l1, l2) -> str:
     if l2[1] < l1[1]: return 'west'
     if l2[1] > l1[1]: return 'east'
     return None
-
 
 
 def build_place_invalid(obs, valid_map):
