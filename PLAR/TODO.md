@@ -35,3 +35,25 @@ LLM/CoT/ReAct
 - 正在建造的 object 挡路
 - units 都没有 ID，不知道谁是谁
 - 
+
+# 1003
+## SijiaCui
+[] Paper: Abstract
+[] Paper: Method
+[] highlight the point in the figure -- skill lib
+
+## ShuaiXu
+[] Exp prompt: {manual}, {examples}, [opponent]
+[] Exp Baseline: low-level: CoT/ReAct(examples)
+
+## AiyaoHe
+[] Paper: Related Work
+
+## Others
+    High-level: TextSC2 adaptation, -> XXX --expertRule--> Parameter, 
+    Harvest Mineral -> expertRule --> 1,2,3,4
+    Oracel
+    Harvest Mineral(1,2,3,4)
+    Cost?
+    PDDL
+    [] Exp Qwen2_72b: 
