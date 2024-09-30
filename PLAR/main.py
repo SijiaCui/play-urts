@@ -1,11 +1,10 @@
 import numpy as np
-from queue import Queue
 
-from PLAR.llm_agent import coa_agent
-from PLAR.utils.utils import load_args, CHOOSEN_MAPS, script_mapping
+from PLAR.utils.llm_agent import coa_agent
+from PLAR.utils.utils import load_args, CHOSEN_MAPS, parse_task, path_planning
 
 from PLAR.obs2text import obs_2_text
-from PLAR.text2coa import text_2_coa, subtask_assignment
+# from PLAR.text2coa import text_2_coa, subtask_assignment
 
 # import env and AI bots
 from gym_microrts import microrts_ai
@@ -13,22 +12,11 @@ from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
 from stable_baselines3.common.vec_env import VecVideoRecorder
 
 
-def print_ai_info(step: int, obs: np.ndarray, obs_json: dict):
-    ai = 'red'
-    obs = obs.reshape((obs_json['env']['height'], obs_json['env']['width'], -1))
-    # for i in range(len(obs[ai]['worker'])):
-    i = -1
-    worker = obs_json[ai]['worker'][i]
-
-    print(f"RED: step-{step} worker-{i} location-{worker['location']} hp-{worker['hp']} resource-{worker['resource_num']} curact-{worker['action']} ")
-    # if worker['action'] == 'attack':
-    #     print(f"location-{worker['location']}: {obs[worker['location']]}")
-
 def main():
     args = load_args()
     ca = coa_agent(args)
 
-    map_name = CHOOSEN_MAPS['3']
+    map_name = CHOSEN_MAPS['3']
     env = MicroRTSGridModeVecEnv(
         num_selfplay_envs=0,
         num_bot_envs=1,
@@ -45,15 +33,14 @@ def main():
     env = VecVideoRecorder(env, "videos", record_video_trigger=lambda x: True, video_length=args.video_length, name_prefix=name_prefix)
 
     obs = env.reset()
-    
+
     for i in range(600):
         print(f"{'#'*20}step-{i}{'#'*20}")
         obs_text, obs_json = obs_2_text(obs)
-        # print_ai_info(i, obs, obs_json)
 
         if i % 100 == 0:
-            response = ca.run(obs_text)
-#             response = f"""
+            # response = ca.run(obs_text)
+            response = """
 # START of COA
 # 1. [Harvest Mineral]
 # 2. [Build Base
@@ -67,18 +54,29 @@ def main():
 # 10. [Attack Enemy Soldiers
 # END of COA
 # """
-        coa = text_2_coa(obs_json=obs_json, llm_response=response)
+        height = obs_json["env"]["height"]
+        width = obs_json["env"]["width"]
+        action_mask = env.get_action_mask()
+        action_mask = action_mask.reshape(-1, action_mask.shape[-1])
 
-        for task in coa:
-            obs_json = subtask_assignment(obs_json, task)
-        print(f"Assigned Task: {obs_json['blue']}")
+        # generate a valid map that indicates that grid is valid to be moved on
+        obs = obs.reshape((height, width, -1))
+        valid_map = np.zeros(shape=(height, width))
+        valid_map[np.where(obs[:, :, 13] == 1)] = 1  # UNIT_NONE_INDEX
 
-        action = script_mapping(env, obs=obs, obs_json=obs_json)
+        path_planer = path_planning(valid_map)
+        print(path_planer.get_locs_with_dist_from_tgt((1, 1), 3))
 
-        obs, reward, done, info = env.step(np.array(action))
+    # for task in coa:
+    #     obs_json = subtask_assignment(obs_json, task)
+    # print(f"Assigned Task: {obs_json['blue']}")
 
-        if done:
-            obs = env.reset()
+    # action = script_mapping(env, obs=obs, obs_json=obs_json)
+
+    # obs, reward, done, info = env.step(np.array(action))
+
+    # if done:
+    #     obs = env.reset()
     env.close()
 
 if __name__ == "__main__":
