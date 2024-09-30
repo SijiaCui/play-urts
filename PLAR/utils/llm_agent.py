@@ -6,7 +6,8 @@ from langchain_openai import AzureChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 
-from PLAR.utils.utils import coa_prompt, COA_MANUAL, COA_OPPONENT, COA_ACTION_SPACE_STR, COA_EXAMPLES
+from PLAR.utils.fewshots import COA_MANUAL, COA_OPPONENT, COA_ACTION_SPACE_STR, COA_EXAMPLES
+from PLAR.utils.prompts import coa_prompt
 
 class coa_agent:
     def __init__(self, args) -> None:

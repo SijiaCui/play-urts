@@ -1,38 +1,37 @@
 # TODO
-[x] ranged, heavy, light 不同是什么
-
-[] barrack_produce_soldiers(soldier_type, direction)
-
-[]
-
-[] 
-
-LLM PLAY RTS:
-Task1
-    Worker1 go to Mineral1 -> Move_to_loc(unit, location)
-    Worker1 Harvesting -> harvesting(unit, location)
-    Subtask2 -> Function2(parameters)
-    Subtask3 -> Function3(parameters)
-    Subtask4 -> Function4(parameters)
-Task2
-    ...
-Task3
+- [x] ranged, heavy, light 不同是什么
+- [x] task to actions
+- [x] task assignment
+- [x] some bugs
+  - [x] ranged auto attack
+- [] call llm
+  - [] rewrite prompt
+    - 任务和参数要求
+    - 示例
 
 
-Baselines: 
-Rules: .....
-LLM ACT with low-level action: LLM/CoT/ReAct
+## LLM PLAY RTS
 
+- LLM output task format, `[task](params)`
+    - `[Scout Location](unit_type, tgt_loc)`   # 持续性任务
+    - `[Harvest Mineral](mineral_loc, tgt_loc, base_loc, return_loc)`  # 持续任务
+    - `[Build Building](building_type, building_loc, tgt_loc)`  # 一次性任务
+    - `[Produce Unit](produce_type, direction)`  # 一次性任务
+    - `[Attack Enemy](unit_type, enemy_type, enemy_loc, tgt_loc)`  # 一次性任务
+    - `[Joint Attack Enemy](units, enemy_loc)`
 
-[Xu shuai]
-Opponent Modeling: prompt -> prompt'
+## Baselines
 
-mini-game √, RTS √
+### Rule
 
+...
 
-units
-    - worker
+### LLM ACT with low-level action
+
+LLM/CoT/ReAct
 
 # 问题
-- 正在建造的object挡路
-- units都没有ID，不知道谁是谁
+
+- 正在建造的 object 挡路
+- units 都没有 ID，不知道谁是谁
+- 

@@ -130,7 +130,7 @@ def get_json(obs: np.ndarray) -> dict:
                 'hp': hp,
                 'resource_num': resource_num,
                 'action': ACTION_MAP[str(action)],
-                'task': 'noop'
+                'task': '[noop]'
             }
         )
         # location index to query unit information
@@ -141,7 +141,7 @@ def get_json(obs: np.ndarray) -> dict:
             'hp': hp,
             'resource_num': resource_num,
             'action': ACTION_MAP[str(action)],
-            'task': 'noop'
+            'task': '[noop]'
         }
     # 蓝方兵营: location, hp, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_BARRACK_INDEX]==1)
@@ -159,7 +159,7 @@ def get_json(obs: np.ndarray) -> dict:
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)],
-                'task': 'noop'
+                'task': '[noop]'
             }
         )
         # location index to query unit information
@@ -169,7 +169,7 @@ def get_json(obs: np.ndarray) -> dict:
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)],
-            'task': 'noop'
+            'task': '[noop]'
         }
     # 蓝方工人: location, hp, resource_num, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_WORKER_INDEX]==1)
@@ -189,7 +189,7 @@ def get_json(obs: np.ndarray) -> dict:
                 'hp': hp,
                 'resource_num': resource_num,
                 'action': ACTION_MAP[str(action)],
-                'task': 'noop'
+                'task': '[noop]'
             }
         )
         # location index to query unit information
@@ -200,7 +200,7 @@ def get_json(obs: np.ndarray) -> dict:
             'hp': hp,
             'resource_num': resource_num,
             'action': ACTION_MAP[str(action)],
-            'task': 'noop'
+            'task': '[noop]'
         }
     # 蓝方light: location, hp, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_LIGHT_INDEX]==1)
@@ -218,7 +218,7 @@ def get_json(obs: np.ndarray) -> dict:
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)],
-                'task': 'noop'
+                'task': '[noop]'
             }
         )
         # location index to query unit information
@@ -228,7 +228,7 @@ def get_json(obs: np.ndarray) -> dict:
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)],
-            'task': 'noop'
+            'task': '[noop]'
         }
     # 蓝方重型士兵: location, hp, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_HEAVY_INDEX]==1)
@@ -246,7 +246,7 @@ def get_json(obs: np.ndarray) -> dict:
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)],
-                'task': 'noop'
+                'task': '[noop]'
             }
         )
         # location index to query unit information
@@ -256,7 +256,7 @@ def get_json(obs: np.ndarray) -> dict:
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)],
-            'task': 'noop'
+            'task': '[noop]'
         }
     # 蓝方远程士兵: location, hp, action
     index = np.where((obs[:,:,OWNER_BLUE_INDEX]==1) & obs[:,:,UNIT_RANGED_INDEX]==1)
@@ -274,7 +274,7 @@ def get_json(obs: np.ndarray) -> dict:
                 'location': location,
                 'hp': hp,
                 'action': ACTION_MAP[str(action)],
-                'task': 'noop'
+                'task': '[noop]'
             }
         )
         # location index to query unit information
@@ -284,7 +284,7 @@ def get_json(obs: np.ndarray) -> dict:
             'location': location,
             'hp': hp,
             'action': ACTION_MAP[str(action)],
-            'task': 'noop'
+            'task': '[noop]'
         }
 
     # 红方情况
@@ -597,14 +597,14 @@ def obs_2_text(obs: np.ndarray, zh=False) -> Tuple[str, dict]:
         str: text description of observation
         dict: json type observation
     '''
-    print(f"{'*'*10}Obs2Text: running{'*'*10}", flush=True)
+    # print(f"{'*'*10}Obs2Text: running{'*'*10}", flush=True)
     map_height = obs.shape[1]
     map_width = obs.shape[2]
     text = ''
     obs = obs.reshape((map_height, map_width, -1))
     
     data = get_json(obs)
-    print(data)
+    # print(data)
 
     with open('data.json', 'w') as f:
         import copy
@@ -619,14 +619,14 @@ def obs_2_text(obs: np.ndarray, zh=False) -> Tuple[str, dict]:
     text_blue = get_blue_text(data['blue'])
 
     text = text_env + text_red + text_blue
-    print(f"Observation Text: \n{text}")
+    # print(f"Observation Text: \n{text}")
 
     if zh:
         from PLAR.utils.utils import en2zh
         text_ZH = en2zh(text)
-        print(f"Observation Text_ZH: \n{text_ZH}")
+        # print(f"Observation Text_ZH: \n{text_ZH}")
     
-    print(f"{'*'*10}Obs2Text: done{'*'*10}", flush=True)
+    # print(f"{'*'*10}Obs2Text: done{'*'*10}", flush=True)
     return text, data
 
 
@@ -680,10 +680,10 @@ def test_obs_2_text():
     from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
     from stable_baselines3.common.vec_env import VecVideoRecorder
 
-    from PLAR.utils.utils import CHOOSEN_MAPS
-    print(len(CHOOSEN_MAPS), CHOOSEN_MAPS)
+    from PLAR.utils.utils import CHOSEN_MAPS
+    print(len(CHOSEN_MAPS), CHOSEN_MAPS)
 
-    for map_name in CHOOSEN_MAPS.values():
+    for map_name in CHOSEN_MAPS.values():
         envs = MicroRTSGridModeVecEnv(
             num_selfplay_envs=0,
             num_bot_envs=1,

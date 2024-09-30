@@ -1,5 +1,3 @@
-
-
 COA_MANUAL = """
 """
 
@@ -18,3 +16,30 @@ END of COA
 
 COA_DETAILED_EXAMPLES = """
 """
+
+COA_H_Mineral = "[Harvest Mineral]"
+COA_B_Base = "[Build Base]"
+COA_B_Barrack = "[Build Barrack]"
+
+COA_P_Worker = "[Produce Worker]"
+COA_P_Light = "[Produce Light Soldier]"
+COA_P_Heavy = "[Produce Heavy Soldier]"
+COA_P_Ranged = "[Produce Ranged Soldier]"
+
+COA_A_Worker = "[Attack Enemy Worker]"
+COA_A_Buildings = "[Attack Enemy Buildings]"
+COA_A_Soldiers = "[Attack Enemy Soldiers]"
+
+COA_ACTION_SPACE = [
+    COA_H_Mineral,
+    COA_B_Base,
+    COA_B_Barrack,
+    COA_P_Worker,
+    COA_P_Light,
+    COA_P_Heavy,
+    COA_P_Ranged,
+    COA_A_Worker,
+    COA_A_Buildings,
+    COA_A_Soldiers,
+]
+COA_ACTION_SPACE_STR = f"{{{', '.join(COA_ACTION_SPACE)}}}"

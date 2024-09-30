@@ -16,3 +16,7 @@ texts/
 
 main.log
 data.json
+
+/.vscode/
+/.env
+/*.log
