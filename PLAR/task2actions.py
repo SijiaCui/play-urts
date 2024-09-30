@@ -1,10 +1,9 @@
 import numpy as np
 
-from typing import List
 from PLAR.utils.utils import path_planning, get_direction
 
 __all__ = [
-    "TASK_SCOUT_LOCATION",
+    "TASK_DEPLOY_UNIT",
     "TASK_HARVEST_MINERAL",
     "TASK_BUILD_BUILDING",
     "TASK_PRODUCE_UNIT",
@@ -14,19 +13,14 @@ __all__ = [
 ]
 
 
-TASK_SCOUT_LOCATION = "[Scout Location]"
-
+TASK_DEPLOY_UNIT = "[Deploy Unit]"
 TASK_HARVEST_MINERAL = "[Harvest Mineral]"
 TASK_BUILD_BUILDING = "[Build Building]"
-
 TASK_PRODUCE_UNIT = "[Produce Unit]"
-
 TASK_ATTACK_ENEMY = "[Attack Enemy]"
-TASK_JOINT_ATTACK_ENEMY = "[Joint Attack Enemy]"
-
 
 TASK_SPACE = [
-    TASK_SCOUT_LOCATION,
+    TASK_DEPLOY_UNIT,
     TASK_HARVEST_MINERAL,
     TASK_BUILD_BUILDING,
     TASK_PRODUCE_UNIT,
@@ -46,19 +40,19 @@ DIRECTION_STR_MAPPING = {
 # ====================
 
 
-def task_scout_location(
+def task_deploy_unit(
     unit: dict,
+    unit_type: str,
     tgt_loc: tuple,
     path_planner: path_planning,
     action_mask: np.ndarray,
-    **kwargs
 ) -> np.ndarray:
     """
     Task for moving to a location
 
     Args:
         unit (dict): who to do the task
-        unit_loc (tuple): star_loc
+        unit_type (str): type of unit to deploy
         tgt_loc (tuple): where to move
         path_planner (path_planning): to plan the path
         action_mask (np.ndarray): to indicate which actions are available, of shape [action types + params]
@@ -165,27 +159,6 @@ def task_attack_enemy(
     return attack(unit, enemy_loc, action_mask)
 
 
-def task_joint_attack_enemy(
-    units: List[dict],
-    enemy_loc: tuple,
-    path_planner: path_planning,
-    action_masks: List[np.ndarray],
-    **kwargs
-) -> List[np.ndarray]:
-    """
-    Task for joint attacking a enemy unit
-
-    Args:
-        units (List[dict]): who to do the task
-        enemy_loc (tuple): where enemy
-        path_planner (path_planning): plans the direction of movement
-        action_masks (List[np.ndarray]): to indicate which actions are available, of shape [# of units, action types + params]
-    """
-    # TODO: 同时开始攻击（同时到达攻击位置）
-    # 难点：不同单位移动时间不同，worker(10), light(8), heavy(12), ranged(12)
-    ...
-
-
 # ====================
 #      Subtasks
 # ====================
@@ -194,7 +167,7 @@ def move_to_loc(
     unit: dict, tgt_loc: tuple, path_planner: path_planning, action_mask: np.ndarray
 ) -> np.ndarray:
     if unit["location"] == tgt_loc:
-        return noop(unit, action_mask)
+        return noop(unit)
     direction = path_planner.get_shortest_path(tuple(unit["location"]), tgt_loc)[1]
     return move(unit, DIRECTION_STR_MAPPING[str(direction)], action_mask)
 
@@ -382,14 +355,13 @@ def print_action_info(unit, action):
 
 
 # ====================
-#       MAPPING
+#     Func. Mapping
 # ====================
 
 TASK_ACTION_MAPPING = {
-    TASK_SCOUT_LOCATION: task_scout_location,
+    TASK_DEPLOY_UNIT: task_deploy_unit,
     TASK_HARVEST_MINERAL: task_harvest_mineral,
     TASK_BUILD_BUILDING: task_build_building,
     TASK_PRODUCE_UNIT: task_produce_unit,
-    TASK_ATTACK_ENEMY: task_attack_enemy,
-    TASK_JOINT_ATTACK_ENEMY: task_joint_attack_enemy
+    TASK_ATTACK_ENEMY: task_attack_enemy
 }

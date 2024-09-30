@@ -2,13 +2,14 @@ import numpy as np
 
 from typing import List, Dict, Union
 
+__all__ = ["script_mapping"]
+
 from PLAR.task2actions import (
-    TASK_SCOUT_LOCATION,
+    TASK_DEPLOY_UNIT,
     TASK_HARVEST_MINERAL,
     TASK_BUILD_BUILDING,
     TASK_PRODUCE_UNIT,
     TASK_ATTACK_ENEMY,
-    TASK_JOINT_ATTACK_ENEMY,
     TASK_SPACE,
     TASK_ACTION_MAPPING
 )
@@ -58,18 +59,31 @@ def task_assign(
             assigned_units.append(unit)
     return assigned_units
 
-def assign_task_scout_location(task_params: List, controlled_units: Dict, *args) -> Union[Dict, bool]:
-    # [Scout Location](unit_type, tgt_loc)
+
+def assign_task_deploy_unit(
+    task_params: List,
+    controlled_units: Dict,
+    obs_dict: Dict,
+    path_planner: path_planning,
+) -> Union[Dict, bool]:
+    # [Deploy Unit](unit_type, tgt_loc)
     assigned = False
+    min_index = 0
+    min_path_len = 1e9
     for i, unit in enumerate(controlled_units[task_params[0]]):
         if unit["task"] == "[noop]":
-            unit["task"] = TASK_SCOUT_LOCATION
-            unit["task_params"] = task_params[1:]
-            controlled_units[task_params[0]][i] = unit
-            assigned = True
-            break
+            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
+            if path_len < min_path_len:
+                min_index = i
+                min_path_len = path_len
+    if min_path_len != 1e9:
+        controlled_units[task_params[0]][min_index]["task"] = TASK_DEPLOY_UNIT
+        controlled_units[task_params[0]][min_index]["task_params"] = task_params
+        assigned = True
+        controlled_units[task_params[0]][i] = unit
+        assigned = True
     if not assigned:
-        print(f"No units found for task {TASK_SCOUT_LOCATION} with params {task_params}")
+        print(f"No units found for task {TASK_DEPLOY_UNIT} with params {task_params}")
     return controlled_units
 
 
@@ -99,30 +113,44 @@ def assign_task_harvest_mineral(
     return controlled_units
 
 
-def assign_task_build_building(task_params: List, controlled_units: Dict, *args) -> Union[Dict, bool]:
+def assign_task_build_building(
+    task_params: List, 
+    controlled_units: Dict, 
+    obs_dict: Dict, 
+    path_planner: path_planning
+) -> Union[Dict, bool]:
     # [Build Building](building_type, building_loc, tgt_loc)
     assigned = False
+    min_index = 0
+    min_path_len = 1e9
     for i, unit in enumerate(controlled_units["worker"]):
         if unit["task"] == "[noop]":
-            unit["task"] = TASK_BUILD_BUILDING
-            unit["task_params"] = task_params
-            controlled_units["worker"][i] = unit
-            assigned = True
-            break
+            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[2])
+            if path_len < min_path_len:
+                min_index = i
+                min_path_len = path_len
+    if min_path_len != 1e9:
+        controlled_units["worker"][min_index]["task"] = TASK_BUILD_BUILDING
+        controlled_units["worker"][min_index]["task_params"] = task_params
+        assigned = True
     if not assigned:
         print(f"No units found for task {TASK_BUILD_BUILDING} with params {task_params}")
     return controlled_units
 
 
-def assign_task_produce_unit(task_params: List, controlled_units: Dict, *args) -> Union[Dict, bool]:
+def assign_task_produce_unit(
+    task_params: List,
+    controlled_units: Dict,
+    obs_dict: Dict,
+    path_planner: path_planning,
+) -> Union[Dict, bool]:
     # [Produce Unit](produce_type, direction)
     assigned = False
     unit_type = "base" if task_params[0] == "worker" else "barrack"
     for i, unit in enumerate(controlled_units[unit_type]):
         if unit["task"] == "[noop]":
-            unit["task"] = TASK_PRODUCE_UNIT
-            unit["task_params"] = task_params
-            controlled_units[unit_type][i] = unit
+            controlled_units[unit_type][i]["task"] = TASK_PRODUCE_UNIT
+            controlled_units[unit_type][i]["task_params"] = task_params
             assigned = True
             break
     if not assigned:
@@ -138,25 +166,24 @@ def assign_task_attack_enemy(
 ) -> Union[Dict, bool]:
     # [Attack Enemy](unit_type, enemy_loc, tgt_loc)
     assigned = False
+    min_index = 0
+    min_path_len = 1e9
     for i, unit in enumerate(controlled_units[task_params[0]]):
         if unit["task"] == "[noop]":
             task_params = adjust_task_attack_enemy_params(unit, task_params, obs_dict, path_planner)
             if task_params is None:
                 return controlled_units
-            unit["task"] = TASK_ATTACK_ENEMY if task_params is not None else "[noop]"
-            unit["task_params"] = task_params
-            controlled_units[task_params[0]][i] = unit
-            assigned = True
-            break
+            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
+            if path_len < min_path_len:
+                min_index = i
+                min_path_len = path_len
+    if min_path_len != 1e9:
+        controlled_units[task_params[0]][min_index]["task"] = TASK_ATTACK_ENEMY
+        controlled_units[task_params[0]][min_index]["task_params"] = task_params
+        assigned = True
     if not assigned:
         print(f"No units found for task {TASK_ATTACK_ENEMY} with params {task_params}")
     return controlled_units
-
-
-def assign_task_joint_attack_enemy(task_params: List, controlled_units: Dict, *args) -> Union[Dict, bool]:
-    # TODO: 同时开始攻击
-    # [Joint Attack Enemy](units, enemy_loc)
-    ...
 
 
 def adjust_task_attack_enemy_params(
@@ -201,12 +228,11 @@ def adjust_task_attack_enemy_params(
 
 
 ASSIGN_TASK_MAPPING = {
-    TASK_SCOUT_LOCATION: assign_task_scout_location,
+    TASK_DEPLOY_UNIT: assign_task_deploy_unit,
     TASK_HARVEST_MINERAL: assign_task_harvest_mineral,
     TASK_BUILD_BUILDING: assign_task_build_building,
     TASK_PRODUCE_UNIT: assign_task_produce_unit,
     TASK_ATTACK_ENEMY: assign_task_attack_enemy,
-    TASK_JOINT_ATTACK_ENEMY: assign_task_joint_attack_enemy
 }
 
 
@@ -224,11 +250,13 @@ def script_mapping(
     Mapping tasks to action vectors.
 
     Args:
-        env (Union[MicroRTSGridModeVecEnv, VecVideoRecorder]): _description_
-        obs_dict (Dict): _description_
+        env (Union[MicroRTSGridModeVecEnv, VecVideoRecorder]): game environment
+        task_list (List[str]): list of tasks
+        task_params (List): list of task parameters
+        obs_dict (Dict): observation dictionary
 
     Returns:
-        np.ndarray: _description_
+        np.ndarray: action vectors
     """
     height = obs_dict["env"]["height"]
     width = obs_dict["env"]["width"]

@@ -269,14 +269,14 @@ def parse_task(text: str) -> list:
 
 def params_valid(task, params):
     from PLAR.task2actions import (
-        TASK_SCOUT_LOCATION,
+        TASK_DEPLOY_UNIT,
         TASK_HARVEST_MINERAL,
         TASK_BUILD_BUILDING,
         TASK_PRODUCE_UNIT,
         TASK_ATTACK_ENEMY,
     )
 
-    if task == TASK_SCOUT_LOCATION:
+    if task == TASK_DEPLOY_UNIT:
         if (
             len(params) == 2
             and params[0] in UNIT_DAMAGE_MAPPING

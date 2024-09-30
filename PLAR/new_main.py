@@ -3,7 +3,7 @@ import numpy as np
 
 from PLAR.script_mapping import script_mapping
 from PLAR.utils.utils import CHOSEN_MAPS, FIGHT_FOR, ENEMY, parse_task, load_args
-from PLAR.obs2text import get_json, obs_2_text
+from PLAR.obs2text import obs_2_text
 from PLAR.utils.llm_agent import coa_agent
 
 # import env and AI bots
@@ -59,31 +59,20 @@ def main():
         },
     }
     task_list, task_params = [], []
+    from PLAR.heuristic_strategy import counter_coacAI_0_to_100, counter_coacAI_100_to_300, counter_coacAI_300_to_inf
     for i in range(int(1e9)):
         print(f"{'-'*20} step-{i} {'-'*20}")
 
         obs_text, obs_dict = obs_2_text(obs)
 
-        if i % 1000 == 0:
+        if i == 0:
             # response = agent.run(obs_text)
-            response = """
-START of TASK
-[Harvest Mineral]((0, 0), (1, 0), (1, 2), (1, 1)),
-[Produce Unit]('worker', 'south'),
-[Build Building]('barrack', (3, 2), (2, 2)),
-[Harvest Mineral]((0, 0), (0, 1), (1, 2), (0, 2))],
-[Produce Unit]('ranged', 'east'),
-[Produce Unit]('light', 'south'),
-[Produce Unit]('ranged', 'south'),
-[Produce Unit]('heavy', 'east'),
-[Attack Enemy]('light', 'base', (6, 5), (5, 5)),
-[Attack Enemy]('ranged', 'worker', (6, 6), (4, 5)),
-[Attack Enemy]('heavy', 'base', (6, 7), (5, 7)),
-[Attack Enemy]('heavy', 'barrack', (6, 7), (5, 7)),
-END of TASK
-"""
-            task_list, task_params = parse_task(response)
-
+            response = counter_coacAI_0_to_100
+        if i == 100:
+            response = counter_coacAI_100_to_300
+        if i == 300:
+            response = counter_coacAI_300_to_inf
+        task_list, task_params = parse_task(response)
         old_situation = copy.deepcopy(situation)
         situation = update_situation(situation, obs_dict)
         task_list, task_params = update_task_list(task_list, task_params, situation, old_situation)
