@@ -68,7 +68,7 @@ def get_json(obs: np.ndarray) -> dict:
         '4': 'produce',
         '5': 'attack'
     }
-    
+
     data_json = {}
 
     # 环境
@@ -86,7 +86,7 @@ def get_json(obs: np.ndarray) -> dict:
     env_resource_location = np.array(index).T
     env_resource = obs[index]
     # resource_unit_location = np.append(resource_unit_location, [[1,100]], axis=0)
-    
+
     # check_array(resource_unit_location)
     # check_array(resource_unit_list)
 
@@ -94,6 +94,7 @@ def get_json(obs: np.ndarray) -> dict:
     for i in range(len(env_resource)):
         location = tuple(env_resource_location[i].tolist())
         resource_num = int(np.where(env_resource[i][RESOURCE_START:RESOURCE_END] > 0)[0])
+        resource_num = ">= 4" if resource_num == 4 else resource_num
         data_json['env']['resource'].append(
             {
                 'owner': 'env',
@@ -121,6 +122,7 @@ def get_json(obs: np.ndarray) -> dict:
         location = tuple(blue_base_location[i].tolist())
         hp = int(np.where(blue_base[i][HP_START:HP_END] > 0)[0])
         resource_num = int(np.where(blue_base[i][RESOURCE_START:RESOURCE_END] > 0)[0])
+        resource_num = ">= 4" if resource_num == 4 else resource_num
         action = int(np.where(blue_base[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['blue']['base'].append(
             {
@@ -298,6 +300,7 @@ def get_json(obs: np.ndarray) -> dict:
         location = tuple(red_base_location[i].tolist())
         hp = int(np.where(red_base[i][HP_START:HP_END] > 0)[0])
         resource_num = int(np.where(red_base[i][RESOURCE_START:RESOURCE_END] > 0)[0])
+        resource_num = ">= 4" if resource_num == 4 else resource_num
         action = int(np.where(red_base[i][ACTION_START:ACTION_END] > 0)[0])
         data_json['red']['base'].append(
             {

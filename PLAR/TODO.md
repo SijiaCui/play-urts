@@ -39,7 +39,7 @@ LLM/CoT/ReAct
 
 - 正在建造的 object 挡路
 - units 都没有 ID，不知道谁是谁
-- 
+- ！！！基地资源 obs 一直是 0（环境问题）
 
 # 1003
 ## SijiaCui

@@ -8,8 +8,8 @@ from PLAR.utils.llm_agent import coa_agent
 
 # import env and AI bots
 from gym_microrts import microrts_ai
-from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
-from stable_baselines3.common.vec_env import VecVideoRecorder
+from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
+from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
     agent = coa_agent(args)
 
     map_name = CHOSEN_MAPS["3"]
-    env = MicroRTSGridModeVecEnv(
+    env = MicroRTSGridModePLARVecEnv(
         num_selfplay_envs=0,
         num_bot_envs=1,
         max_steps=2000,
@@ -30,7 +30,7 @@ def main():
     env.metadata["video.frames_per_second"] = args.video_fps
 
     name_prefix = map_name.split("maps/")[-1].split(".xml")[0].replace("/", "-")
-    env = VecVideoRecorder(
+    env = PLARVecVideoRecorder(
         env,
         "videos",
         record_video_trigger=lambda x: True,
@@ -38,7 +38,7 @@ def main():
         name_prefix=name_prefix,
     )
 
-    obs = env.reset()
+    obs, resources = env.reset()
 
     situation = {
         "blue": {
@@ -62,16 +62,22 @@ def main():
     from PLAR.heuristic_strategy import counter_coacAI_0_to_100, counter_coacAI_100_to_300, counter_coacAI_300_to_inf
     for i in range(int(1e9)):
         print(f"{'-'*20} step-{i} {'-'*20}")
+        print(resources)
 
         obs_text, obs_dict = obs_2_text(obs)
 
-        if i == 0:
-            # response = agent.run(obs_text)
-            response = counter_coacAI_0_to_100
-        if i == 100:
-            response = counter_coacAI_100_to_300
-        if i == 300:
-            response = counter_coacAI_300_to_inf
+        # if i == 0:
+        #     # response = agent.run(obs_text)
+        #     response = counter_coacAI_0_to_100
+        # if i == 100:
+        #     response = counter_coacAI_100_to_300
+        # if i == 300:
+        #     response = counter_coacAI_300_to_inf
+        response = """
+START of TASK
+[Harvest Mineral]((0, 0), (1, 0), (1, 2), (1, 1)),
+END of TASK
+"""
         task_list, task_params = parse_task(response)
         old_situation = copy.deepcopy(situation)
         situation = update_situation(situation, obs_dict)
@@ -79,7 +85,7 @@ def main():
 
         action_vectors = script_mapping(env, task_list, task_params, obs_dict)
 
-        obs, reward, done, info = env.step(np.array(action_vectors))
+        obs, reward, done, info, resources = env.step(np.array(action_vectors))
 
         if done:
             env.close()
