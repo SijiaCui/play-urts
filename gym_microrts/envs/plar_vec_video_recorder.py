@@ -65,7 +65,7 @@ class PLARVecVideoRecorder(VecEnvWrapper):
         self.recorded_frames = 0
 
     def reset(self) -> VecEnvObs:
-        obs = self.venv.reset()
+        obs, resources = self.venv.reset()
         # self.start_video_recorder()
         self.record_id += 1
         self.step_id = 0
@@ -73,7 +73,7 @@ class PLARVecVideoRecorder(VecEnvWrapper):
             self.start_video_recorder()
         else:
             self.close_video_recorder()
-        return obs
+        return obs, resources
 
     def start_video_recorder(self) -> None:
         self.close_video_recorder()
@@ -92,7 +92,7 @@ class PLARVecVideoRecorder(VecEnvWrapper):
         return self.record_video_trigger(self.step_id)
 
     def step_wait(self) -> VecEnvStepReturn:
-        obs, rews, dones, infos, resources = self.venv.step_wait()
+        obs, resources, rews, dones, infos = self.venv.step_wait()
 
         self.step_id += 1
         if self.recording:
@@ -105,7 +105,7 @@ class PLARVecVideoRecorder(VecEnvWrapper):
         if not self.recording and self._video_enabled():
             self.start_video_recorder()
 
-        return obs, rews, dones, infos, resources
+        return (obs, resources), rews, dones, infos
 
     def close_video_recorder(self) -> None:
         if self.recording and self.video_recorder:

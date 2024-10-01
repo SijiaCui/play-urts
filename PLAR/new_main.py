@@ -3,7 +3,7 @@ import numpy as np
 
 from PLAR.script_mapping import script_mapping
 from PLAR.utils.utils import CHOSEN_MAPS, FIGHT_FOR, ENEMY, parse_task, load_args
-from PLAR.obs2text import obs_2_text
+from PLAR.obs2text import obs_2_text, get_json
 from PLAR.utils.llm_agent import coa_agent
 
 # import env and AI bots
@@ -38,7 +38,7 @@ def main():
         name_prefix=name_prefix,
     )
 
-    obs, resources = env.reset()
+    obs = env.reset()
 
     situation = {
         "blue": {
@@ -62,9 +62,8 @@ def main():
     from PLAR.heuristic_strategy import counter_coacAI_0_to_100, counter_coacAI_100_to_300, counter_coacAI_300_to_inf
     for i in range(int(1e9)):
         print(f"{'-'*20} step-{i} {'-'*20}")
-        print(resources)
 
-        obs_text, obs_dict = obs_2_text(obs)
+        obs_dict = get_json(*obs)
 
         # if i == 0:
         #     # response = agent.run(obs_text)
@@ -85,7 +84,7 @@ END of TASK
 
         action_vectors = script_mapping(env, task_list, task_params, obs_dict)
 
-        obs, reward, done, info, resources = env.step(np.array(action_vectors))
+        obs, reward, done, info = env.step(np.array(action_vectors))
 
         if done:
             env.close()

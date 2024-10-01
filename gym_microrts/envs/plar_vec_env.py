@@ -189,19 +189,9 @@ class MicroRTSGridModePLARVecEnv:
 
     def reset(self):
         responses = self.vec_client.reset([0] * self.num_envs)
-        obs = [self._encode_obs(np.array(ro)) for ro in responses.observation]
+        obs = [np.array(ro) for ro in responses.observation]
 
-        return np.array(obs), np.array(responses.resources)
-
-    def _encode_obs(self, obs):
-        obs = obs.reshape(len(obs), -1).clip(0, np.array([self.num_planes]).T - 1)
-        obs_planes = np.zeros((self.height * self.width, self.num_planes_prefix_sum[-1]), dtype=np.int32)
-        obs_planes_idx = np.arange(len(obs_planes))
-        obs_planes[obs_planes_idx, obs[0]] = 1
-
-        for i in range(1, self.num_planes_len):
-            obs_planes[obs_planes_idx, obs[i] + self.num_planes_prefix_sum[i]] = 1
-        return obs_planes.reshape(self.height, self.width, -1)
+        return (np.array(obs), np.array(responses.resources))
 
     def step_async(self, actions):
         actions = actions.reshape((self.num_envs, self.width * self.height, -1))
@@ -222,9 +212,8 @@ class MicroRTSGridModePLARVecEnv:
     def step_wait(self):
         responses = self.vec_client.gameStep(self.actions, [0] * self.num_envs)
         reward, done = np.array(responses.reward), np.array(responses.done)
-        obs = [self._encode_obs(np.array(ro)) for ro in responses.observation]
+        obs = [np.array(ro) for ro in responses.observation]
         infos = [{"raw_rewards": item} for item in reward]
-        # recourse = responses.p
         # check if it is in evaluation, if not, then change maps
         if len(self.cycle_maps) > 0:
             # check if an environment is done, if done, reset the client, and replace the observation
@@ -245,7 +234,7 @@ class MicroRTSGridModePLARVecEnv:
                         p1_response = self.vec_client.selfPlayClients[done_idx // 2].getResponse(1)
                         obs[done_idx] = self._encode_obs(np.array(p0_response.observation))
                         obs[done_idx + 1] = self._encode_obs(np.array(p1_response.observation))
-        return np.array(obs), reward @ self.reward_weight, done[:, 0], infos, np.array(responses.resources)
+        return (np.array(obs), np.array(responses.resources)), reward @ self.reward_weight, done[:, 0], infos
 
     def step(self, ac):
         self.step_async(ac)
