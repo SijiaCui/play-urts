@@ -1,6 +1,6 @@
 import numpy as np
 
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Tuple
 
 __all__ = ["script_mapping"]
 
@@ -10,10 +10,9 @@ from PLAR.task2actions import (
     TASK_BUILD_BUILDING,
     TASK_PRODUCE_UNIT,
     TASK_ATTACK_ENEMY,
-    TASK_SPACE,
     TASK_ACTION_MAPPING
 )
-from PLAR.utils.utils import path_planning, manhattan_distance, ENEMY, UNIT_DAMAGE_MAPPING, FIGHT_FOR, UNIT_RANGE_MAPPING
+from PLAR.utils.utils import path_planning, ENEMY, UNIT_DAMAGE_MAPPING, FIGHT_FOR, UNIT_RANGE_MAPPING
 
 from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
 from stable_baselines3.common.vec_env import VecVideoRecorder
@@ -25,206 +24,148 @@ __all__ = ["script_mapping"]
 #     Assign Tasks
 # ====================
 
-
 def task_assign(
-    task_list: List[str], 
-    task_params_list: List, 
+    tasks: List[Tuple],
     obs_dict: Dict,
-    path_planner: path_planning
+    path_planner: path_planning,
+    auto_attack: bool = False
 ) -> List[Dict]:
     """Assign tasks to units based on their parameters.
 
     Args:
-        task_list (List[str]): A list of task names.
-        task_params (List): A list of task parameters.
-        obs_dict (Dict): A dictionary of observations.
+        tasks (List[Tuple]): list of tasks, each task is a tuple of (task_type, task_params)
+        obs_dict (Dict): observations dictionary
+        path_planner (path_planning): plans path for units
+        auto_attack (bool, optional): whether to automatically attack enemies if they are within range. Defaults to False.
 
     Returns:
-        A list of assigned tasks units.
+        List[Dict]: list of assigned units
     """
-    controlled_units = obs_dict[FIGHT_FOR]
-    for task, task_params in zip(task_list, task_params_list):
-        if task in ASSIGN_TASK_MAPPING.keys():
-            controlled_units = ASSIGN_TASK_MAPPING[task](task_params, controlled_units, obs_dict, path_planner)
-    
-    # Auto Attack
+    exist_units = {unit_id: unit_dict for unit_id, unit_dict in obs_dict[FIGHT_FOR].items() if isinstance(unit_dict, dict)}
+
+    for task in tasks:
+        exist_units = ASSIGN_TASK_MAPPING[task[0]](task[1], exist_units, obs_dict, path_planner)
+
     assigned_units = []
-    for units in controlled_units.values():
-        for unit in units:
-            if unit["type"] in UNIT_RANGE_MAPPING and unit["action"] == "noop":
-                target = auto_choose_target(unit, obs_dict, path_planner)
-                if target:
-                    unit["task"] = TASK_ATTACK_ENEMY
-                    unit["task_params"] = (unit["type"], target["type"], target["location"], unit["location"])
+    for unit in exist_units.values():
+        if unit["type"] in UNIT_RANGE_MAPPING and unit["action"] == "noop":
+            # Auto Attack
+            target = auto_choose_target(unit, obs_dict, path_planner)
+            if target:
+                unit["task_type"] = TASK_ATTACK_ENEMY
+                unit["task_params"] = (unit["type"], target["type"])
+        if unit["task_type"] != "[noop]":
             assigned_units.append(unit)
     return assigned_units
 
 
 def assign_task_deploy_unit(
     task_params: List,
-    controlled_units: Dict,
+    exist_units: Dict,
     obs_dict: Dict,
     path_planner: path_planning,
 ) -> Union[Dict, bool]:
     # [Deploy Unit](unit_type, tgt_loc)
-    assigned = False
-    min_index = 0
+    closest_unit_id = -1
     min_path_len = 1e9
-    for i, unit in enumerate(controlled_units[task_params[0]]):
-        if unit["task"] == "[noop]":
+    for unit in exist_units.values():
+        if unit["task_type"] == "[noop]" and unit["type"] == task_params[0]:
             path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
             if path_len < min_path_len:
-                min_index = i
+                closest_unit_id = unit["id"]
                 min_path_len = path_len
-    if min_path_len != 1e9:
-        controlled_units[task_params[0]][min_index]["task"] = TASK_DEPLOY_UNIT
-        controlled_units[task_params[0]][min_index]["task_params"] = task_params
-        assigned = True
-        controlled_units[task_params[0]][i] = unit
-        assigned = True
-    if not assigned:
-        print(f"No units found for task {TASK_DEPLOY_UNIT} with params {task_params}")
-    return controlled_units
+    if closest_unit_id != -1:
+        exist_units[closest_unit_id]["task_type"] = TASK_DEPLOY_UNIT
+        exist_units[closest_unit_id]["task_params"] = task_params
+    else:
+        print(f"Pending task: {TASK_DEPLOY_UNIT}{task_params}")
+    return exist_units
 
 
 def assign_task_harvest_mineral(
     task_params: List, 
-    controlled_units: Dict, 
+    exist_units: Dict, 
     obs_dict: Dict, 
     path_planner: path_planning
 ) -> Union[Dict, bool]:
-    # [Harvest Mineral](mineral_loc, tgt_loc, base_loc, return_loc)
-    assigned = False
-    min_index = 0
+    # [Harvest Mineral](mineral_loc)
+    closest_unit_id = -1
     min_path_len = 1e9
-    for i, unit in enumerate(controlled_units["worker"]):
-        if unit["task"] == "[noop]":
-            path1_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
-            path2_len, _ = path_planner.get_shortest_path(unit["location"], task_params[3])
-            if path1_len + path2_len < min_path_len:
-                min_index = i
-                min_path_len = path1_len + path2_len
-    if min_path_len != 1e9:
-        controlled_units["worker"][min_index]["task"] = TASK_HARVEST_MINERAL
-        controlled_units["worker"][min_index]["task_params"] = task_params
-        assigned = True
-    if not assigned:
-        print(f"No units found for task {TASK_HARVEST_MINERAL} with params {task_params}")
-    return controlled_units
+    for unit in exist_units.values():
+        if unit["task_type"] == "[noop]" and unit["type"] == "worker":
+            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params)
+            if path_len  < min_path_len:
+                closest_unit_id = unit["id"]
+                min_path_len = path_len
+    if closest_unit_id != -1:
+        exist_units[closest_unit_id]["task_type"] = TASK_HARVEST_MINERAL
+        exist_units[closest_unit_id]["task_params"] = task_params
+    else:
+        print(f"Pending task: {TASK_HARVEST_MINERAL}{task_params}")
+    return exist_units
 
 
 def assign_task_build_building(
     task_params: List, 
-    controlled_units: Dict, 
+    exist_units: Dict, 
     obs_dict: Dict, 
     path_planner: path_planning
 ) -> Union[Dict, bool]:
-    # [Build Building](building_type, building_loc, tgt_loc)
-    assigned = False
-    min_index = 0
+    # [Build Building](building_type, building_loc)
+    closest_unit_id = -1
     min_path_len = 1e9
-    for i, unit in enumerate(controlled_units["worker"]):
-        if unit["task"] == "[noop]":
-            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[2])
+    for unit in exist_units.values():
+        if unit["task_type"] == "[noop]" and unit["type"] == "worker":
+            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
             if path_len < min_path_len:
-                min_index = i
+                closest_unit_id = unit["id"]
                 min_path_len = path_len
-    if min_path_len != 1e9:
-        controlled_units["worker"][min_index]["task"] = TASK_BUILD_BUILDING
-        controlled_units["worker"][min_index]["task_params"] = task_params
-        assigned = True
-    if not assigned:
-        print(f"No units found for task {TASK_BUILD_BUILDING} with params {task_params}")
-    return controlled_units
+    if closest_unit_id != -1:
+        exist_units[closest_unit_id]["task_type"] = TASK_BUILD_BUILDING
+        exist_units[closest_unit_id]["task_params"] = task_params
+    else:
+        print(f"Pending task: {TASK_BUILD_BUILDING}{task_params}")
+    return exist_units
 
 
 def assign_task_produce_unit(
     task_params: List,
-    controlled_units: Dict,
+    exist_units: Dict,
     obs_dict: Dict,
     path_planner: path_planning,
 ) -> Union[Dict, bool]:
     # [Produce Unit](produce_type, direction)
     assigned = False
     unit_type = "base" if task_params[0] == "worker" else "barrack"
-    for i, unit in enumerate(controlled_units[unit_type]):
-        if unit["task"] == "[noop]":
-            controlled_units[unit_type][i]["task"] = TASK_PRODUCE_UNIT
-            controlled_units[unit_type][i]["task_params"] = task_params
+    for unit in exist_units.values():
+        if unit["task_type"] == "[noop]" and unit["type"] == unit_type:
+            exist_units[unit["id"]]["task_type"] = TASK_PRODUCE_UNIT
+            exist_units[unit["id"]]["task_params"] = task_params
             assigned = True
             break
     if not assigned:
-        print(f"No units found for task {TASK_PRODUCE_UNIT} with params {task_params}")
-    return controlled_units
+        print(f"Pending task: {TASK_PRODUCE_UNIT}{task_params}")
+    return exist_units
 
 
 def assign_task_attack_enemy(
     task_params: List,
-    controlled_units: Dict,
+    exist_units: Dict,
     obs_dict: Dict,
     path_planner: path_planning
 ) -> Union[Dict, bool]:
-    # [Attack Enemy](unit_type, enemy_loc, tgt_loc)
+    # [Attack Enemy](unit_type, enemy_type)
+    # TODO: Can we assign the closet unit to do this?    
     assigned = False
-    min_index = 0
-    min_path_len = 1e9
-    for i, unit in enumerate(controlled_units[task_params[0]]):
-        if unit["task"] == "[noop]":
-            task_params = adjust_task_attack_enemy_params(unit, task_params, obs_dict, path_planner)
-            if task_params is None:
-                return controlled_units
-            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
-            if path_len < min_path_len:
-                min_index = i
-                min_path_len = path_len
-    if min_path_len != 1e9:
-        controlled_units[task_params[0]][min_index]["task"] = TASK_ATTACK_ENEMY
-        controlled_units[task_params[0]][min_index]["task_params"] = task_params
-        assigned = True
+    for unit in exist_units.values():
+        if unit["task_type"] == "[noop]" and unit["type"] == task_params[0]:
+            exist_units[unit["id"]]["task_type"] = TASK_ATTACK_ENEMY
+            exist_units[unit["id"]]["task_params"] = task_params
+            assigned = True
+            break
     if not assigned:
-        print(f"No units found for task {TASK_ATTACK_ENEMY} with params {task_params}")
-    return controlled_units
-
-
-def adjust_task_attack_enemy_params(
-    unit: dict, 
-    task_params: List, 
-    obs_dict: Dict, 
-    path_planner: path_planning
-) -> tuple:
-    """Adjust attack params based on observation.
-    If the enemy leaves the predetermined position, automatically search for the target.
-
-    Args:
-        unit (dict): unit to do the task
-        task_params (List): attack task params
-        obs_dict (Dict): current observation
-        path_planner (path_planning): plans path for units
-
-    Returns:
-        Tuple: adjusted attack task params
-    """
-    # [Attack Enemy](unit_type, enemy_type, enemy_loc, tgt_loc)
-    unit_type, enemy_type, enemy_loc, tgt_loc = task_params
-    enemy = obs_dict["units"][enemy_loc]
-
-    enemy = {} if enemy != {} and enemy["owner"] != ENEMY else enemy
-    if enemy == {} or enemy["type"] != enemy_type:  # enemy leave the scheduled location
-        enemy_locs = []
-        for enemy in obs_dict[ENEMY][enemy_type]:
-            enemy_locs.append(enemy["location"])
-        if enemy_locs == []:  # no enemy found
-            return None
-        enemy_loc = enemy_locs[path_planner.get_manhattan_nearest(enemy_loc, enemy_locs)]
-    if (
-        obs_dict["units"][tgt_loc] != {}
-        or manhattan_distance(enemy_loc, tgt_loc) > UNIT_RANGE_MAPPING[unit_type]
-    ):  # tgt_loc unusable or enemy out of range
-        tgt_locs = path_planner.get_locs_with_dist_from_tgt(
-            enemy_loc, UNIT_RANGE_MAPPING[unit_type]
-        )
-        tgt_loc = tgt_locs[path_planner.get_path_nearest(unit["location"], tgt_locs)]
-    return (unit_type, enemy_type, enemy_loc, tgt_loc)
+        print(f"Pending task: {TASK_ATTACK_ENEMY}{task_params}")
+    return exist_units
 
 
 ASSIGN_TASK_MAPPING = {
@@ -242,21 +183,22 @@ ASSIGN_TASK_MAPPING = {
 
 def script_mapping(
     env: Union[MicroRTSGridModeVecEnv, VecVideoRecorder], 
-    task_list: List[str], 
-    task_params: List,
-    obs_dict: Dict
+    tasks: List[Tuple],
+    obs_dict: Dict,
+    assigned_units: List,
+    auto_attack: bool = False
 ) -> np.ndarray:
     """
     Mapping tasks to action vectors.
 
     Args:
         env (Union[MicroRTSGridModeVecEnv, VecVideoRecorder]): game environment
-        task_list (List[str]): list of tasks
-        task_params (List): list of task parameters
+        tasks (List[Tuple]): list of tasks, each task is a tuple of (task_type, task_params)
         obs_dict (Dict): observation dictionary
 
     Returns:
         np.ndarray: action vectors
+        List[Dict]: updated assigned units
     """
     height = obs_dict["env"]["height"]
     width = obs_dict["env"]["width"]
@@ -265,20 +207,85 @@ def script_mapping(
     action_masks = action_masks.reshape(-1, action_masks.shape[-1])
 
     path_planer = path_planning(compute_valid_map(obs_dict))
-
-    assigned_units = task_assign(task_list, task_params, obs_dict, path_planer)
+    assigned_units = task_assign(tasks, obs_dict, path_planer, auto_attack)
 
     action_vectors = np.zeros((height * width, 7), dtype=int)
     for unit in assigned_units:
-        if unit["task"] in TASK_SPACE:
-            index = unit["location"][0] * width + unit["location"][1]
-            action_vectors[index] = TASK_ACTION_MAPPING[unit["task"]](
-                unit,
-                *unit["task_params"],
-                path_planner=path_planer,
-                action_mask=action_masks[index],
-            )
+        index = unit["location"][0] * width + unit["location"][1]
+        task_params = ADAPT_TASK_PARAMS_MAPPING[unit["task_type"]](unit, obs_dict, path_planer)
+        action_vectors[index] = TASK_ACTION_MAPPING[unit["task_type"]](
+            unit,
+            *task_params,
+            path_planner=path_planer,
+            action_mask=action_masks[index],
+        )
     return action_vectors
+
+
+def adapt_task_harvest_mineral_params(unit, obs_dict, path_planner: path_planning):
+    # (mineral_loc) -> (mineral_loc, tgt_loc, base_loc, return_loc)
+    mineral_loc = unit["task_params"]
+    tgt_locs = get_around_locs(mineral_loc, obs_dict)
+    tgt_loc = path_planner.get_manhattan_nearest(unit["location"], tgt_locs)
+    for _unit in obs_dict[FIGHT_FOR].values():
+        if isinstance(_unit, dict) and _unit["type"] == "base":
+            base_loc = _unit["location"]
+            break
+    return_locs = get_around_locs(base_loc, obs_dict)
+    return_loc = path_planner.get_manhattan_nearest(unit["location"], return_locs)
+    return (mineral_loc, tgt_loc, base_loc, return_loc)
+
+
+def adapt_task_build_building_params(unit, obs_dict, path_planner: path_planning):
+    # (building_type, building_loc) -> (building_type, building_loc, tgt_loc)
+    building_type, building_loc = unit["task_params"]
+    tgt_locs = get_around_locs(building_loc, obs_dict)
+    tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
+    return (building_type, building_loc, tgt_loc)
+
+
+def adapt_task_attack_enemy_params(unit, obs_dict, path_planner: path_planning):
+    # [Attack Enemy](unit_type, enemy_type) -> [Attack Enemy](unit_type, enemy_type, enemy_loc, tgt_loc)
+    unit_type, enemy_type = unit["task_params"]
+    enemy_locs = []
+    for enemy in obs_dict[ENEMY].values():
+        if isinstance(enemy, dict) and enemy["type"] == enemy_type:
+            enemy_locs.append(enemy["location"])
+    enemy_loc = path_planner.get_path_nearest(unit["location"], enemy_locs)
+
+    tgt_locs = path_planner.get_locs_with_dist_to_tgt(enemy_loc, UNIT_RANGE_MAPPING[unit_type])
+    tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
+    return (unit_type, enemy_type, enemy_loc, tgt_loc)
+
+
+def adapt_task_deploy_unit_params(unit, obs_dict, path_planner: path_planning):
+    return unit["task_params"]
+
+
+def adapt_task_produce_unit_params(unit, obs_dict, path_planner: path_planning):
+    return unit["task_params"]
+
+
+ADAPT_TASK_PARAMS_MAPPING = {
+    TASK_ATTACK_ENEMY: adapt_task_attack_enemy_params,
+    TASK_DEPLOY_UNIT: adapt_task_deploy_unit_params,
+    TASK_PRODUCE_UNIT: adapt_task_produce_unit_params,
+    TASK_HARVEST_MINERAL: adapt_task_harvest_mineral_params,
+    TASK_BUILD_BUILDING: adapt_task_build_building_params,
+}
+
+
+def get_around_locs(loc, obs_dict):
+    around_locs = [
+        (loc[0] + 1, loc[1]),
+        (loc[0] - 1, loc[1]),
+        (loc[0], loc[1] + 1),
+        (loc[0], loc[1] - 1),
+    ]
+    for around_loc in around_locs:
+        if around_loc not in obs_dict["units"].keys():
+            around_locs.remove(around_loc)
+    return around_locs
 
 
 def compute_valid_map(obs_dict):
@@ -301,12 +308,13 @@ def auto_choose_target(unit: dict, obs_dict: dict, path_planner: path_planning) 
 
     Returns: chosen target
     """
-    # 优先攻击可以杀死的重轻远工兵营基地，否则乱打
+    # 优先攻击可以杀死的重轻远工兵营基地
+    # 如果都不能一击毙命，则优先攻击重轻远工兵营基地
     loc = unit["location"]
-    targets_locs = path_planner.get_locs_with_dist_from_tgt(loc, UNIT_RANGE_MAPPING[unit["type"]])
+    targets_locs = path_planner.get_locs_with_dist_to_tgt(loc, UNIT_RANGE_MAPPING[unit["type"]])
 
     targets = [obs_dict["units"][loc] for loc in targets_locs if loc in obs_dict["units"] and obs_dict["units"][loc] != {} and obs_dict["units"][loc]["owner"] == ENEMY]
-    
+
     enemy_hp = np.array([target["hp"] for target in targets if target != {} and target["owner"] == ENEMY])
     enemy_type = np.array([target["type"] for target in targets if target != {} and target["owner"] == ENEMY])
 
@@ -316,17 +324,9 @@ def auto_choose_target(unit: dict, obs_dict: dict, path_planner: path_planning) 
     indices = np.where(enemy_hp <= unit_damage)[0]
     priority_list = ["heavy", "light", "ranged", "worker", "barrack", "base"]
 
-    if len(indices) > 0:
-        for target_type in priority_list:
-            type_indices = np.where(enemy_type[indices] == target_type)[0]
-            if type_indices.size > 0:
-                return targets[indices[type_indices[0]]]
+    indices = indices if len(indices) > 0 else np.arange(len(targets))
+    for target_type in priority_list:
+        type_indices = np.where(enemy_type[indices] == target_type)[0]
+        if type_indices.size > 0:
+            return targets[indices[type_indices[0]]]
     return targets[np.random.choice(len(targets))]
-
-
-if __name__ == "__main__":
-    k = "ranged"
-    if k in UNIT_RANGE_MAPPING.keys():
-        print(UNIT_RANGE_MAPPING[k])
-    else:
-        print("Not found")

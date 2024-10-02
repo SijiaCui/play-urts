@@ -351,7 +351,7 @@ def attack(unit: dict, tgt_loc: tuple, action_mask: np.ndarray) -> np.ndarray:
 def print_action_info(unit, action):
     if unit["action"] != "noop":
         action = unit["action"]
-    print(f"{unit['type']}{tuple(unit['location'])}: {unit['task']}{unit['task_params']}/{action}")
+    print(f"{unit['type']}{tuple(unit['location'])}: {unit['task_type']}{unit['task_params']}/{action}")
 
 
 # ====================

@@ -1,4 +1,3 @@
-import numpy as np
 import ast
 
 from typing import Tuple, List
@@ -80,6 +79,11 @@ def load_args():
     with open('/root/desc/play-urts/PLAR/configs.json', 'r') as f:
         config = json.load(f)
 
+    # game parameters
+    parser.add_argument('--max_steps', type=int, default=int(config['max_steps']))
+    parser.add_argument('--tasks_update_interval', type=int, default=int(config['tasks_update_interval']))
+    parser.add_argument("--map_index", type=str, default=str(config["map_index"]))
+
     # llm parameters
     parser.add_argument('--engine', type=str, default=config['llm_engine'])
     parser.add_argument('--temperature', type=float, default=float(config['llm_engine_temperature']))
@@ -91,18 +95,12 @@ def load_args():
     parser.add_argument('--capture_video', action='store_true')
 
     # other parameters
-    parser.add_argument('--map_index', type=str, default=str(config['map_index']))
-    parser.add_argument('--action_queue_size', type=int, default=int(config['action_queue_size']))
-
     parser.add_argument('--debug', action='store_true')
 
-    args = parser.parse_args()
-
-    return args
+    return parser.parse_args()
 
 
 def manhattan_distance(l1, l2) -> int:
-    assert len(l1) == len(l2)
     return sum([abs(l1[i] - l2[i]) for i in range(len(l1))])
 
 
@@ -213,7 +211,7 @@ class path_planning:
             if cur_path < min_path:
                 min_i = i
                 min_path = cur_path
-        return min_i
+        return targets[min_i]
 
     def get_manhattan_nearest(self, location: tuple, targets: List[tuple]) -> int:
         min_i = 0
@@ -223,9 +221,9 @@ class path_planning:
             if cur_dist < min_dist:
                 min_i = i
                 min_dist = cur_dist
-        return min_i
-    
-    def get_locs_with_dist_from_tgt(self, tgt_loc: tuple, dist: int) -> List[tuple]:
+        return targets[min_i]
+
+    def get_locs_with_dist_to_tgt(self, tgt_loc: tuple, dist: int) -> List[tuple]:
         locs = []
         for i in range(self.height):
             for j in range(self.width):
@@ -264,7 +262,7 @@ def parse_task(text: str) -> list:
     print("Parsed Tasks from LLM's Respond:")
     for task, params in zip(task_list, params_list):
         print(task, params)
-    return task_list, params_list
+    return list(zip(task_list, params_list))
 
 
 def params_valid(task, params):
@@ -285,19 +283,15 @@ def params_valid(task, params):
             return task, params
     if task == TASK_HARVEST_MINERAL:
         if (
-            len(params) == 4
-            and type(params[1]) is tuple
-            and type(params[0]) is tuple
-            and type(params[2]) is tuple
-            and type(params[3]) is tuple
+            len(params) == 2
+            and type(params) is tuple
         ):
             return task, params
     if task == TASK_BUILD_BUILDING:
         if (
-            len(params) == 3
+            len(params) == 2
             and params[0] in BUILDING_SPACE
             and type(params[1]) is tuple
-            and type(params[2]) is tuple
         ):
             return task, params
     if task == TASK_PRODUCE_UNIT:
@@ -309,11 +303,9 @@ def params_valid(task, params):
             return task, params
     if task == TASK_ATTACK_ENEMY:
         if (
-            len(params) == 4
+            len(params) == 2
             and params[0] in UNIT_DAMAGE_MAPPING
             and params[1] in ALL_UNIT_SPACE
-            and type(params[2]) is tuple
-            and type(params[3]) is tuple
         ):
             return task, params
 

@@ -12,87 +12,78 @@ def get_json(obs: np.ndarray, resources: np.ndarray) -> dict:
     CUR_ACTION_INDEX = 5
 
     ACTION_MAP = {
-        '0': 'noop',
-        '1': 'move',
-        '2': 'harvest',
-        '3': 'return',
-        '4': 'produce',
-        '5': 'attack'
+        "0": "noop",
+        "1": "move",
+        "2": "harvest",
+        "3": "return",
+        "4": "produce",
+        "5": "attack"
     }
 
     UNIT_TYPE_MAP = {
-        "resource": 1,
-        "base": 2,
-        "barrack": 3,
-        "worker": 4,
-        "light": 5,
-        "heavy": 6,
-        "ranged": 7,
+        "1": "resource",
+        "2": "base",
+        "3": "barrack",
+        "4": "worker",
+        "5": "light",
+        "6": "heavy",
+        "7": "ranged",
     }
 
     OWNER_MAP = {"blue": 1, "red": 2}
 
-    data_json = {}
+    obs_json = {}
 
     # 环境
     obs = np.squeeze(obs)
     resources = np.squeeze(resources)
-    data_json['env'] = {}
-    data_json['env']['height'] = obs.shape[1]
-    data_json['env']['width'] = obs.shape[2]
-    data_json['units'] = {}
-    for i in range(data_json['env']['height']):
-        for j in range(data_json['env']['width']):
-            data_json['units'][(i,j)] = {}
+    obs_json["env"] = {}
+    obs_json["env"]["height"] = obs.shape[1]
+    obs_json["env"]["width"] = obs.shape[2]
+    obs_json["units"] = {}
+    for i in range(obs_json["env"]["height"]):
+        for j in range(obs_json["env"]["width"]):
+            obs_json["units"][(i, j)] = {}
 
-    locations = np.where(obs[UNIT_TYPE_INDEX] == UNIT_TYPE_MAP['resource'])
+    # env
+    locations = np.where(obs[UNIT_TYPE_INDEX] == 1)
     locations = np.array(locations).T
-    data_json['env']['resource'] = []
+    obs_json["env"]["resource"] = []
     for location in locations:
         location = tuple(location.tolist())
         d = {
             "owner": "env",
             "type": "resource",
             "location": location,
-            "resource_num": int(obs[RESOURCE_INDEX][location]),
+            "resource_num": obs[RESOURCE_INDEX][location],
             "id": int(obs[UNIT_ID_INDEX][location])
         }
-        data_json['env']['resource'].append(d)
-        data_json['units'][location] = d
+        obs_json["env"]["resource"].append(d)
+        obs_json["units"][location] = d
 
-    def get_unit_json(obs, obs_json, unit_type, owner):
-        locations = np.where(
-            (
-                (obs[UNIT_TYPE_INDEX] == UNIT_TYPE_MAP[unit_type]) 
-                & (obs[OWNER_INDEX] == OWNER_MAP[owner])
-            )
-        )
+    # units
+    for owner in OWNER_MAP.keys():
+        obs_json[owner] = {}
+        obs_json[owner]["resources"] = resources[OWNER_MAP[owner] - 1]
+        locations = np.where(obs[OWNER_INDEX] == OWNER_MAP[owner])
         locations = np.array(locations).T
-        obs_json[owner][unit_type] = []
         for location in locations:
             location = tuple(location.tolist())
+            unit_id = int(obs[UNIT_ID_INDEX][location])
             d = {
                 "owner": owner,
-                "type": unit_type,
+                "type": UNIT_TYPE_MAP[str(obs[UNIT_TYPE_INDEX][location])],
                 "location": location,
-                "hp": int(obs[HP_INDEX][location]),
+                "hp": obs[HP_INDEX][location],
                 "action": ACTION_MAP[str(obs[CUR_ACTION_INDEX][location])],
-                "id": int(obs[UNIT_ID_INDEX][location]),
-                "resource_num": int(obs[RESOURCE_INDEX][location]),
-                "task": "[noop]",
-                "task params": (),
+                "id": unit_id,
+                "resource_num": obs[RESOURCE_INDEX][location],
+                "task_type": "[noop]",
+                "task_params": (),
             }
-            obs_json[owner][unit_type].append(d)
+            obs_json[owner][unit_id] = d
             obs_json["units"][location] = d
-        return obs_json
-
-    for owner in OWNER_MAP.keys():
-        data_json[owner] = {}
-        data_json["blue"]["resource"] = int(resources[OWNER_MAP[owner] - 1])
-        for unit_type in ["base", "barrack", "worker", "light", "heavy", "ranged"]:
-            data_json = get_unit_json(obs, data_json, unit_type, owner)
-
-    return data_json
+    return obs_json
 
 
 CONST_BLUE = 'blue team'

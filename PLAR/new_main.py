@@ -1,10 +1,12 @@
-import copy
 import numpy as np
+
+from typing import Tuple, List
 
 from PLAR.script_mapping import script_mapping
 from PLAR.utils.utils import CHOSEN_MAPS, FIGHT_FOR, ENEMY, parse_task, load_args
 from PLAR.obs2text import obs_2_text, get_json
 from PLAR.utils.llm_agent import coa_agent
+from PLAR.task2actions import TASK_HARVEST_MINERAL, TASK_BUILD_BUILDING, TASK_PRODUCE_UNIT, TASK_DEPLOY_UNIT, TASK_ATTACK_ENEMY
 
 # import env and AI bots
 from gym_microrts import microrts_ai
@@ -13,8 +15,11 @@ from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
 
 
 def main():
+    # ====================
+    #        Init
+    # ====================
     args = load_args()
-    agent = coa_agent(args)
+    llm_agent = coa_agent(args)
 
     map_name = CHOSEN_MAPS["3"]
     env = MicroRTSGridModePLARVecEnv(
@@ -39,7 +44,6 @@ def main():
     )
 
     obs = env.reset()
-
     situation = {
         "blue": {
             "worker": 1,
@@ -58,32 +62,26 @@ def main():
             "ranged": 0,
         },
     }
-    task_list, task_params = [], []
-    from PLAR.heuristic_strategy import counter_coacAI_0_to_100, counter_coacAI_100_to_300, counter_coacAI_300_to_inf
-    for i in range(int(1e9)):
+
+    # ====================
+    #         Gaming
+    # ====================
+    from PLAR.heuristic_strategy import counter_coacAI
+
+    for i in range(args.max_steps):
         print(f"{'-'*20} step-{i} {'-'*20}")
 
-        obs_dict = get_json(*obs)
+        if i % args.tasks_update_interval == 0:
+            # obs_text, obs_dict = obs_2_text(obs)
+            # response = agent.run(obs_text)
+            obs_dict = get_json(*obs)
+            response = counter_coacAI[i // args.tasks_update_interval]
+            tasks = parse_task(response)
+        else:
+            obs_dict = get_json(*obs)
 
-        # if i == 0:
-        #     # response = agent.run(obs_text)
-        #     response = counter_coacAI_0_to_100
-        # if i == 100:
-        #     response = counter_coacAI_100_to_300
-        # if i == 300:
-        #     response = counter_coacAI_300_to_inf
-        response = """
-START of TASK
-[Harvest Mineral]((0, 0), (1, 0), (1, 2), (1, 1)),
-END of TASK
-"""
-        task_list, task_params = parse_task(response)
-        old_situation = copy.deepcopy(situation)
-        situation = update_situation(situation, obs_dict)
-        task_list, task_params = update_task_list(task_list, task_params, situation, old_situation)
-
-        action_vectors = script_mapping(env, task_list, task_params, obs_dict)
-
+        tasks, situation = update_tasks(tasks, situation, obs_dict)
+        action_vectors = script_mapping(env, tasks, obs_dict, True)
         obs, reward, done, info = env.step(np.array(action_vectors))
 
         if done:
@@ -93,39 +91,65 @@ END of TASK
 
 
 def update_situation(situation, obs_dict):
-    for keys in situation[FIGHT_FOR].keys():
-        situation[FIGHT_FOR][keys] = len(obs_dict[FIGHT_FOR][keys])
-    for keys in situation[ENEMY].keys():
-        situation[ENEMY][keys] = len(obs_dict[ENEMY][keys])
-    return situation
+    def update_unit_count(situation_section, obs_section):
+        for unit_type in situation_section.keys():
+            for unit in obs_section.values():
+                if isinstance(unit, dict) and unit["type"] == unit_type:
+                    situation_section[unit_type] += 1
+
+    new_situation = {}
+    new_situation[FIGHT_FOR] = {unit_type: 0 for unit_type in situation[FIGHT_FOR].keys()}
+    new_situation[ENEMY] = {unit_type: 0 for unit_type in situation[ENEMY].keys()}
+
+    update_unit_count(new_situation[FIGHT_FOR], obs_dict[FIGHT_FOR])
+    update_unit_count(new_situation[ENEMY], obs_dict[ENEMY])
+
+    return new_situation, situation
 
 
-def update_task_list(task_list, task_params, new_situation, old_situation):
-    for unit_type in new_situation[FIGHT_FOR].keys():
-        changes = max(new_situation[FIGHT_FOR][unit_type] - old_situation[FIGHT_FOR][unit_type], 0)
-        for j, (task, params) in enumerate(zip(task_list, task_params)):
-            if (
-                params[0] == unit_type
-                and task
-                in [
-                    "[Produce Unit]",
-                    "[Build Building]",
-                ]
-                and changes > 0
-            ):
-                task_list.pop(j)
-                task_params.pop(j)
-                changes -= 1
+def update_tasks(tasks: List[Tuple], situation, obs_dict):
+    new_situation, old_situation = update_situation(situation, obs_dict)
+    def process_tasks(tasks, situation_key, unit_index, task_types, changes_condition):
+        for unit_type in new_situation[situation_key].keys():
+            changes = max(changes_condition(unit_type), 0)
+            for task in tasks:
+                if (
+                    task[0] in task_types
+                    and task[1][unit_index] == unit_type
+                    and changes > 0
+                ):
+                    print(f"Completed task: {task[0]}{task[1]}")
+                    tasks.remove(task)
+                    changes -= 1
+                    if changes == 0:
+                        break
 
-    for unit_type in new_situation[ENEMY].keys():
-        changes = max(old_situation[ENEMY][unit_type] - new_situation[ENEMY][unit_type], 0)
-        for j, (task, params) in enumerate(zip(task_list, task_params)):
-            if params[1] == unit_type and task in ["[Attack Enemy]"] and changes > 0:
-                task_list.pop(j)
-                task_params.pop(j)
-                changes -= 1
+    process_tasks(
+        tasks,
+        FIGHT_FOR,
+        0,
+        [TASK_PRODUCE_UNIT, TASK_BUILD_BUILDING],
+        lambda unit_type: new_situation[FIGHT_FOR][unit_type]
+        - old_situation[FIGHT_FOR][unit_type],
+    )
 
-    return task_list, task_params
+    process_tasks(
+        tasks,
+        ENEMY,
+        1,
+        [TASK_ATTACK_ENEMY],
+        lambda unit_type: old_situation[ENEMY][unit_type]
+        - new_situation[ENEMY][unit_type],
+    )
+
+    for task in tasks:
+        if task[0] == TASK_HARVEST_MINERAL and (
+            obs_dict["units"][task[1]] == {} 
+            or new_situation[FIGHT_FOR]["base"] == 0
+        ):
+            tasks.remove(task)
+
+    return tasks, new_situation
 
 
 if __name__ == "__main__":
