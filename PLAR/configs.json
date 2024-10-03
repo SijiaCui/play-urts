@@ -1,6 +1,6 @@
 {
-    "max_steps": 1000,
-    "tasks_update_interval": 200,
+    "max_steps": 2000,
+    "tasks_update_interval": 100,
     "llm_engine": "Qwen2-72B-Instruct",
     "llm_engine_temperature": 0,
     "llm_engine_max_tokens": 1024,

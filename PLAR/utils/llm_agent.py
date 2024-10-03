@@ -1,15 +1,12 @@
-import os
 import tiktoken
 
 from langchain_openai import AzureChatOpenAI
 
-from langchain.prompts import PromptTemplate
 from langchain_core.messages import HumanMessage
 
-from PLAR.utils.fewshots import COA_MANUAL, COA_OPPONENT, COA_ACTION_SPACE_STR, COA_EXAMPLES
-from PLAR.utils.prompts import coa_prompt
+from PLAR.utils.prompts import zero_shot_prompt, few_shot_prompt, prompt_w_tip, prompt_w_opponent, MANUAL, OPPONENT, TASK_SPACE, EXAMPLES, TIP
 
-class coa_agent:
+class LLMAgent:
     def __init__(self, args) -> None:
         self.args = args
 
@@ -21,31 +18,30 @@ class coa_agent:
             )
 
         self.step = 0
-        self.prompt = coa_prompt
-    
+        self.prompt = prompt_w_tip
+
     def _post_processing(self, response: str) -> str:
 
         return response
 
     def _agent_prompt(self) -> str:
-        # input_variables = ["manual", "opponent", "action_space", "examples", "observation"]
         kwargs = {
-            "manual": COA_MANUAL,
-            "opponent": COA_OPPONENT,
-            'action_space': COA_ACTION_SPACE_STR,
-            'examples': COA_EXAMPLES,
-            'observation': self.obs
+            "manual": MANUAL,
+            "task_space": TASK_SPACE,
+            "examples": EXAMPLES,
+            "observation": self.obs,
+            "tip": TIP,
         }
 
         return self.prompt.format(**kwargs)
-        
 
     def _agent_response(self) -> str:
         LLM_DEBUG = self.args.debug
         if LLM_DEBUG: print(f"{'-'*20}#{self.__class__.__name__} START DEBUGGING#{'-'*20}", flush=True)
         prompt_content = self._agent_prompt()
+        print(prompt_content)
         if LLM_DEBUG: print(f"PROMPT: {self.prompt.input_variables}\n{prompt_content}", flush=True)
-        
+
         try:
             response = self.llm(prompt=prompt_content)
         except Exception as e:
@@ -58,14 +54,13 @@ class coa_agent:
 
         return response
 
-
     def run(self, obs) -> str:
 
         self.obs = obs
-        
-        self.reponse = self._agent_response()
 
-        return self.reponse
+        self.response = self._agent_response()
+
+        return self.response
 
 
 class llms:
@@ -135,7 +130,36 @@ if __name__ == "__main__":
     from PLAR.utils.utils import load_args
     args = load_args()
 
-    ca = coa_agent(args)
-    response = ca.run("who are you?")
+    obs = """Available Mineral Fields: 2
+- Mineral Fields(0, 0) resource: 16
+- Mineral Fields(7, 7) resource: 13
+
+Red's Units:
+base: 1
+- (6, 5), action: noop
+barrack: 0
+worker: 3
+- (6, 4), action: noop
+- (6, 7), action: noop
+- (7, 5), action: noop
+light: 0
+heavy: 0
+ranged: 0
+
+Blue's Units:
+base: 1
+- (1, 2), task: [noop], action: noop
+barrack: 0
+worker: 3
+- (0, 2), task: [noop], action: noop
+- (1, 1), task: [noop], action: noop
+- (1, 3), task: [noop], action: move
+light: 0
+heavy: 0
+ranged: 0
+"""
+
+    llm_agent = LLMAgent(args)
+    response = llm_agent.run(obs)
 
     print(response)

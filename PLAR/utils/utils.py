@@ -238,7 +238,7 @@ def parse_task(text: str) -> list:
     task_list = []
     params_list = []
     try:
-        text = text.split("START of TASK")[1].split("END of TASK")[0]
+        text = text.split("START of PLAN")[1].split("END of PLAN")[0]
         text_list = text.split("\n")
         for task_with_params in text_list:
             task_beg = task_with_params.find("[")
@@ -285,6 +285,8 @@ def params_valid(task, params):
         if (
             len(params) == 2
             and type(params) is tuple
+            and type(params[0]) is int
+            and type(params[1]) is int
         ):
             return task, params
     if task == TASK_BUILD_BUILDING:

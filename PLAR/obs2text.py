@@ -1,8 +1,9 @@
 import numpy as np
-import json
+from typing import Tuple
+from PLAR.utils.utils import FIGHT_FOR, ENEMY
 
 
-def get_json(obs: np.ndarray, resources: np.ndarray) -> dict:
+def get_json(obs: Tuple[np.ndarray, np.ndarray]) -> dict:
 
     UNIT_ID_INDEX = 0
     HP_INDEX = 1
@@ -35,6 +36,7 @@ def get_json(obs: np.ndarray, resources: np.ndarray) -> dict:
     obs_json = {}
 
     # 环境
+    obs, resources = obs
     obs = np.squeeze(obs)
     resources = np.squeeze(resources)
     obs_json["env"] = {}
@@ -55,7 +57,7 @@ def get_json(obs: np.ndarray, resources: np.ndarray) -> dict:
             "owner": "env",
             "type": "resource",
             "location": location,
-            "resource_num": obs[RESOURCE_INDEX][location],
+            "resource_num": int(obs[RESOURCE_INDEX][location]),
             "id": int(obs[UNIT_ID_INDEX][location])
         }
         obs_json["env"]["resource"].append(d)
@@ -74,10 +76,10 @@ def get_json(obs: np.ndarray, resources: np.ndarray) -> dict:
                 "owner": owner,
                 "type": UNIT_TYPE_MAP[str(obs[UNIT_TYPE_INDEX][location])],
                 "location": location,
-                "hp": obs[HP_INDEX][location],
+                "hp": int(obs[HP_INDEX][location]),
                 "action": ACTION_MAP[str(obs[CUR_ACTION_INDEX][location])],
                 "id": unit_id,
-                "resource_num": obs[RESOURCE_INDEX][location],
+                "resource_num": int(obs[RESOURCE_INDEX][location]),
                 "task_type": "[noop]",
                 "task_params": (),
             }
@@ -89,7 +91,7 @@ def get_json(obs: np.ndarray, resources: np.ndarray) -> dict:
 CONST_BLUE = 'blue team'
 CONST_RED = 'red team'
 
-CONST_MINERAL = 'mineral field'
+CONST_MINERAL = 'Mineral Fields'
 CONST_BASE = 'base'
 CONST_BARRACK = 'barrack'
 CONST_WORKER = 'worker'
@@ -98,187 +100,57 @@ CONST_HEAVY = 'heavy soldier'
 CONST_RANGED = 'ranged soldier'
 
 def get_env_text(env_data: dict) -> str:
-    '''
-    input: data['env']
-    {
-        resource: [
-            resource1{location:xx, resource_num:xx}, 
-            resource2{}, 
-            ...
-        ]
-    }
-    output: text description of env
-    '''
-    text = ''
-    resources = env_data['resource']
-    if len(resources) == 0:
-        text = f"There are no {CONST_MINERAL} available on this map. "
-    elif len(resources) == 1:
-        text = f"There is one {CONST_MINERAL} located in {resources[0]['location']} with {resources[0]['resource_num']} available resources. "
-    else:
-        text = f"There are {len(resources)} {CONST_MINERAL}s in this map. "
-        for i in range(len(resources)):
-            # if resources[i]['resource_num'] == 4:
-            #     text += f"The {CONST_MINERAL} located in {resources[i]['location']} has at least 4 resources. "
-            # else:
-            text += f"The {CONST_MINERAL} located in {resources[i]['location']} has {resources[i]['resource_num']} available resources. "
-
-    return  text
-
-
-def get_blue_text(blue_data: dict) -> str:
-    '''
-    input: data['blue']
-    {
-        'base':[{location:xx, hp:xx, resource_num:xx, action:xx}],
-        'barrack':[{location:xx, hp:xx, action:xx}],
-        'worker':[{location:xx, hp:xx, resource_num:xx, action:xx}],
-        'light':[{location:xx, hp:xx, action:xx}],
-        'heavy':[{location:xx, hp:xx, action:xx}],
-        'ranged':[{location:xx, hp:xx, action:xx}]
-    }
-    output: text description of env
-    '''
-
-    base = blue_data['base']
-    text_base = ''
-    if len(base) == 0:
-        text_base = f"The {CONST_BLUE} has no {CONST_BASE}. "
-    elif len(base) == 1:
-        text_base = f"The {CONST_BLUE} has one {CONST_BASE} located in {base[0]['location']} with {base[0]['resource_num']} remaining resource, {base[0]['hp']} remaining HP, and the current action of it is {base[0]['action']}. "
-    else:
-        text_base = f"The {CONST_BLUE} has a total of {len(base)} {CONST_BASE}s. "
-        for i in range(len(base)):
-            text_base += f"The {CONST_BASE} located in {base[i]['location']} has {base[i]['resource_num']} remaining resource, {base[i]['hp']} remaining HP, and the current action of it is {base[i]['action']}. "
-
-    worker = blue_data['worker']
-    text_worker = ''
-    if len(worker) == 0:
-        text_worker = f"The {CONST_BLUE} has no {CONST_WORKER}. "
-    elif len(worker) == 1:
-        text_worker = f"The {CONST_BLUE} has one {CONST_WORKER} located in {worker[0]['location']}, which carries {worker[0]['resource_num']} resource and the current action is {worker[0]['action']}. "
-    else:
-        text_worker = f"The {CONST_BLUE} has a total of {len(worker)} {CONST_WORKER}s. "
-        for i in range(len(worker)):
-            text_worker += f"The {CONST_WORKER} located in {worker[i]['location']} carries {worker[i]['resource_num']} resource and the current action is {worker[i]['action']}. "
-
-    barrack = blue_data['barrack']
-    text_barrack = ''
-    if len(barrack) == 0:
-        text_barrack = f"The {CONST_BLUE} has no {CONST_BARRACK}. "
-    elif len(barrack) == 1:
-        text_barrack = f"The {CONST_BLUE} has one {CONST_BARRACK} located in {barrack[0]['location']}, which has {barrack[0]['hp']} HP and the current action is {barrack[0]['action']}. "
-    else:
-        text_barrack = f"The {CONST_BLUE} has a total of {len(barrack)} {CONST_BARRACK}s. "
-        for i in range(len(barrack)):
-            text_barrack += f"The {CONST_BARRACK} located in {barrack[i]['location']} has {barrack[i]['hp']} HP and the current action is {barrack[i]['action']}. "
-
-    light = blue_data['light']
-    text_light = ''
-    if len(light) == 0:
-        text_light = f"The {CONST_BLUE} has no {CONST_LIGHT}. "
-    elif len(light) == 1:
-        text_light = f"The {CONST_BLUE} has one {CONST_LIGHT} located in {light[0]['location']}, which has {light[0]['hp']} HP and the current action is {light[0]['action']}. "
-    else:
-        text_light = f"The {CONST_BLUE} has a total of {len(light)} {CONST_LIGHT}s. "
-        for i in range(len(light)):
-            text_light += f"The {CONST_LIGHT} located in {light[i]['location']} has {light[i]['hp']} HP and the current action is {light[i]['action']}. "
-
-    heavy = blue_data['heavy']
-    text_heavy = ''
-    if len(heavy) == 0:
-        text_heavy = f"The {CONST_BLUE} has no {CONST_HEAVY}. "
-    elif len(heavy) == 1:
-        text_heavy = f"The {CONST_BLUE} has one {CONST_HEAVY} located in {heavy[0]['location']}, which has {heavy[0]['hp']} HP and the current action is {heavy[0]['action']}. "
-    else:
-        text_heavy = f"The {CONST_BLUE} has a total of {len(heavy)} {CONST_HEAVY}s. "
-        for i in range(len(heavy)):
-            text_heavy += f"The {CONST_HEAVY} located in {heavy[i]['location']} has {heavy[i]['hp']} HP and the current action is {heavy[i]['action']}. "
-
-    ranged = blue_data['ranged']
-    text_ranged = ''
-    if len(ranged) == 0:
-        text_ranged = f"The {CONST_BLUE} has no {CONST_RANGED}. "
-    elif len(ranged) == 1:
-        text_ranged = f"The {CONST_BLUE} has one {CONST_RANGED} located in {ranged[0]['location']}, which has {ranged[0]['hp']} HP and the current action is {ranged[0]['action']}. "
-    else:
-        text_ranged = f"The {CONST_BLUE} has a total of {len(ranged)} {CONST_RANGED}s. "
-        for i in range(len(ranged)):
-            text_ranged += f"The {CONST_RANGED} located in {ranged[i]['location']} has {ranged[i]['hp']} HP and the current action is {ranged[i]['action']}. "
-
-    text = text_base + text_barrack + text_worker + \
-        text_light + text_heavy + text_ranged
+    text = f"The Game map is a {env_data['height']}x{env_data['width']} grid.\n"
+    resources = env_data["resource"]
+    text += f"Available {CONST_MINERAL}: {len(resources)}\n"
+    for resource in resources:
+        text += f"- {CONST_MINERAL}{resource['location']} resource: {resource['resource_num']}\n"
+    text += f"You are in the {FIGHT_FOR} side.\n"
     return text
 
 
-def get_red_text(red_data: dict) -> str:
-    '''
-    input: data['red']
-    output: text description of env
-    '''
-    return get_blue_text(red_data).replace(CONST_BLUE, CONST_RED)
+def get_player_text(player_data: dict, player: str) -> str:
+    data = {}
+    data["base"] = []
+    data["barrack"] = []
+    data["worker"] = []
+    data["light"] = []
+    data["heavy"] = []
+    data["ranged"] = []
+    for unit in player_data.values():
+        if isinstance(unit, dict):
+            data[unit["type"]].append(unit)
+
+    text = f"{player.capitalize()}'s Units:\n"
+    for unit_type, units in data.items():
+        text += f"{unit_type}: {len(units)}\n"
+        for unit in units:
+            if player == FIGHT_FOR:
+                text += f"- {unit['location']}, task: {unit['task_type']}, action: {unit['action']}\n"
+            else:
+                text += f"- {unit['location']}, action: {unit['action']}\n"
+    return text
 
 
-from typing import Tuple
-
-
-def obs_2_text(obs: Tuple[np.ndarray, np.ndarray], zh=False) -> Tuple[str, dict]:
-    '''
-    Input: 
-        np.ndarray: observation
-
-    Output: 
-        str: text description of observation
-        dict: json type observation
-    '''
-    # print(f"{'*'*10}Obs2Text: running{'*'*10}", flush=True)
-    resources, obs = obs
-    map_height = obs.shape[1]
-    map_width = obs.shape[2]
-    text = ''
-    obs = obs.reshape((map_height, map_width, -1))
-    resources = resources.reshape(-1)
-
+def obs_2_text(obs: Tuple[np.ndarray, np.ndarray]) -> Tuple[str, dict]:
     data = get_json(obs)
-    # print(data)
-
-    with open('data.json', 'w') as f:
-        import copy
-        writable_data = copy.deepcopy(data)
-        # key with tuple type cant be dumped
-        writable_data['units'] = dict((str(k), v) for k,v in data['units'].items())
-        f.write(json.dumps(writable_data))
-
-    # env
-    text_env = get_env_text(data['env'])
-    text_red = get_red_text(data['red'])
-    text_blue = get_blue_text(data['blue'])
-
-    text = text_env + text_red + text_blue
-    # print(f"Observation Text: \n{text}")
-
-    if zh:
-        from PLAR.utils.utils import en2zh
-        text_ZH = en2zh(text)
-        # print(f"Observation Text_ZH: \n{text_ZH}")
-
-    # print(f"{'*'*10}Obs2Text: done{'*'*10}", flush=True)
-    return text, data
+    text_env = get_env_text(data["env"])
+    text_enemy = get_player_text(data[ENEMY], ENEMY)
+    text_fight_for = get_player_text(data[FIGHT_FOR], FIGHT_FOR)
+    return text_env + "\n" + text_enemy + "\n" + text_fight_for, data
 
 
 def show_all_maps_figure():
-    '''
-    visualize all maps, located in `show_maps` directory
-    '''
+    """Visualize all maps, located in `show_maps` directory."""
 
     import os
     # import env and AI bots
     from gym_microrts import microrts_ai
-    from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
-    from stable_baselines3.common.vec_env import VecVideoRecorder
+    from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
+    from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
 
     map_dir = "/root/desc/play-urts/gym_microrts/microrts/maps"
-    
+
     all_map_list = []
     for path, __, files in os.walk(map_dir):
         for file_name in files:
@@ -288,10 +160,10 @@ def show_all_maps_figure():
     all_map_list = all_map_list[1:] # remove /maps/.DS_Store
 
     print(",\n".join(all_map_list))
-    
+
     for tt in all_map_list:
         map_name = tt[tt.find('maps/'):]
-        envs = MicroRTSGridModeVecEnv(
+        envs = MicroRTSGridModePLARVecEnv(
             num_selfplay_envs=0,
             num_bot_envs=1,
             max_steps=2000,
@@ -303,7 +175,13 @@ def show_all_maps_figure():
         )
         name_prefix = map_name.split('maps/')[-1].split('.xml')[0].replace('/', '-')
 
-        envs = VecVideoRecorder(envs, "show_maps", record_video_trigger=lambda x: x == 0, video_length=1, name_prefix=name_prefix)
+        envs = PLARVecVideoRecorder(
+            envs,
+            "show_maps",
+            record_video_trigger=lambda x: x == 0,
+            video_length=1,
+            name_prefix=name_prefix,
+        )
         obs = envs.reset()
         envs.close()
 
@@ -311,16 +189,17 @@ def show_all_maps_figure():
 
 
 def test_obs_2_text():
+    import os
+
     # import env and AI bots
     from gym_microrts import microrts_ai
-    from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
-    from stable_baselines3.common.vec_env import VecVideoRecorder
+    from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
 
     from PLAR.utils.utils import CHOSEN_MAPS
     print(len(CHOSEN_MAPS), CHOSEN_MAPS)
 
     for map_name in CHOSEN_MAPS.values():
-        envs = MicroRTSGridModeVecEnv(
+        envs = MicroRTSGridModePLARVecEnv(
             num_selfplay_envs=0,
             num_bot_envs=1,
             max_steps=2000,
@@ -328,19 +207,18 @@ def test_obs_2_text():
             ai2s=[microrts_ai.coacAI for _ in range(1)],
             map_paths=[map_name],
             reward_weight=np.array([10.0, 1.0, 1.0, 0.2, 1.0, 4.0]),
-            autobuild=False
+            autobuild=False,
         )
         name_prefix = map_name.split('maps/')[-1].split('.xml')[0].replace('/', '-')
-        # envs = VecVideoRecorder(envs, "videos", record_video_trigger=lambda x: x == 0, video_length=1, name_prefix=name_prefix)
-        
+
         obs = envs.reset()
-        # print(obs.shape)
-        # (1, width, height, 27)
 
         obs_text, obs_json = obs_2_text(obs)
-        with open('./texts/' + name_prefix, 'w') as f:
-            f.write(json.dumps(obs_json) + '\n')
-            f.write(obs_text + '\n')
+        path = "texts/"
+        os.makedirs(path, exist_ok=True)
+        with open(path + name_prefix + ".txt", "w") as f:
+            f.write(str(obs_json) + "\n\n")
+            f.write(obs_text + "\n")
 
         envs.close()
 

@@ -1,7 +1,7 @@
 counter_coacAI_0_to_200 = """
 START of TASK
-[Harvest Mineral]((0, 0)),
-[Harvest Mineral]((0, 0)),
+[Harvest Mineral](0, 0),
+[Harvest Mineral](0, 0),
 [Produce Unit]('worker', 'north'),
 [Produce Unit]('worker', 'south'),
 [Produce Unit]('worker', 'east'),
@@ -13,7 +13,7 @@ END of TASK
 counter_coacAI_200_to_400 = """
 START of TASK
 [Build Building]('barrack', (0, 4)),
-[Harvest Mineral]((0, 0)),
+[Harvest Mineral](0, 0),
 [Produce Unit]('worker', 'east'),
 [Produce Unit]('worker', 'south'),
 [Produce Unit]('worker', 'east'),
@@ -24,9 +24,9 @@ END of TASK
 
 counter_coacAI_400_to_600 = """
 START of TASK
-[Harvest Mineral]((0, 0)),
+[Harvest Mineral](0, 0),
 [Deploy Unit]('worker', (2, 3)),
-[Harvest Mineral]((0, 0)),
+[Harvest Mineral](0, 0),
 [Produce Unit]('worker', 'east'),
 [Produce Unit]('worker', 'south'),
 [Produce Unit]('worker', 'east'),

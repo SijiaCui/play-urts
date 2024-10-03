@@ -1,83 +1,159 @@
 import numpy as np
 
-from PLAR.utils.llm_agent import coa_agent
-from PLAR.utils.utils import load_args, CHOSEN_MAPS, parse_task, path_planning
+from typing import Tuple, List
 
-from PLAR.obs2text import obs_2_text
-# from PLAR.text2coa import text_2_coa, subtask_assignment
+from PLAR.script_mapping import script_mapping
+from PLAR.utils.utils import CHOSEN_MAPS, FIGHT_FOR, ENEMY, parse_task, load_args
+from PLAR.obs2text import obs_2_text, get_json
+from PLAR.utils.llm_agent import LLMAgent
+from PLAR.task2actions import TASK_HARVEST_MINERAL, TASK_BUILD_BUILDING, TASK_PRODUCE_UNIT, TASK_DEPLOY_UNIT, TASK_ATTACK_ENEMY
 
 # import env and AI bots
 from gym_microrts import microrts_ai
-from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
-from stable_baselines3.common.vec_env import VecVideoRecorder
+from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
+from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
 
 
 def main():
+    # ====================
+    #        Init
+    # ====================
     args = load_args()
-    ca = coa_agent(args)
+    llm_agent = LLMAgent(args)
 
-    map_name = CHOSEN_MAPS['3']
-    env = MicroRTSGridModeVecEnv(
+    map_name = CHOSEN_MAPS["3"]
+    env = MicroRTSGridModePLARVecEnv(
         num_selfplay_envs=0,
         num_bot_envs=1,
         max_steps=2000,
         render_theme=2,
-        ai2s=[microrts_ai.randomAI for _ in range(1)],
+        ai2s=[microrts_ai.randomBiasedAI for _ in range(1)],
         map_paths=[map_name],
         reward_weight=np.array([10.0, 1.0, 1.0, 0.2, 1.0, 4.0]),
-        autobuild=False
+        autobuild=False,
     )
-    env.metadata['video.frames_per_second'] = args.video_fps
+    env.metadata["video.frames_per_second"] = args.video_fps
 
-    name_prefix = map_name.split('maps/')[-1].split('.xml')[0].replace('/', '-')
-    env = VecVideoRecorder(env, "videos", record_video_trigger=lambda x: True, video_length=args.video_length, name_prefix=name_prefix)
+    name_prefix = map_name.split("maps/")[-1].split(".xml")[0].replace("/", "-")
+    env = PLARVecVideoRecorder(
+        env,
+        "videos",
+        record_video_trigger=lambda x: True,
+        video_length=args.video_length,
+        name_prefix=name_prefix,
+    )
 
     obs = env.reset()
+    situation = {
+        "blue": {
+            "worker": 1,
+            "base": 1,
+            "barrack": 0,
+            "light": 0,
+            "heavy": 0,
+            "ranged": 0,
+        },
+        "red": {
+            "worker": 0,
+            "base": 0,
+            "barrack": 0,
+            "light": 0,
+            "heavy": 0,
+            "ranged": 0,
+        },
+    }
 
-    for i in range(600):
-        print(f"{'#'*20}step-{i}{'#'*20}")
-        obs_text, obs_json = obs_2_text(obs)
+    # ====================
+    #         Gaming
+    # ====================
+    from PLAR.heuristic_strategy import counter_coacAI
 
-        if i % 100 == 0:
-            # response = ca.run(obs_text)
-            response = """
-# START of COA
-# 1. [Harvest Mineral]
-# 2. [Build Base
-# 3. [Build Barrack
-# 4. [Produce Worker]
-# 5. [Produce Light Soldier
-# 6. [Produce Heavy Soldier
-# 7. [Produce Ranged Soldier
-# 8. [Attack Enemy Worker]
-# 9. [Attack Enemy Buildings]
-# 10. [Attack Enemy Soldiers
-# END of COA
-# """
-        height = obs_json["env"]["height"]
-        width = obs_json["env"]["width"]
-        action_mask = env.get_action_mask()
-        action_mask = action_mask.reshape(-1, action_mask.shape[-1])
+    for i in range(args.max_steps):
+        print(f"{'-'*20} step-{i} {'-'*20}")
 
-        # generate a valid map that indicates that grid is valid to be moved on
-        obs = obs.reshape((height, width, -1))
-        valid_map = np.zeros(shape=(height, width))
-        valid_map[np.where(obs[:, :, 13] == 1)] = 1  # UNIT_NONE_INDEX
+        if i % args.tasks_update_interval == 0:
+            obs_text, obs_dict = obs_2_text(obs)
+            # response = counter_coacAI[i // args.tasks_update_interval]
+            obs_text += f"Now is the {i} time step."
+            response = llm_agent.run(obs_text)
+            print(response)
+            tasks = parse_task(response)
+        else:
+            obs_dict = get_json(obs)
 
-        path_planer = path_planning(valid_map)
-        print(path_planer.get_locs_with_dist_from_tgt((1, 1), 3))
+        tasks, situation = update_tasks(tasks, situation, obs_dict)
+        action_vectors = script_mapping(env, tasks, obs_dict, True)
+        obs, reward, done, info = env.step(np.array(action_vectors))
 
-    # for task in coa:
-    #     obs_json = subtask_assignment(obs_json, task)
-    # print(f"Assigned Task: {obs_json['blue']}")
+        if done:
+            env.close()
+            print(f"Game over, reward: {reward}")
+            break
 
-    # action = script_mapping(env, obs=obs, obs_json=obs_json)
 
-    # obs, reward, done, info = env.step(np.array(action))
+def update_situation(situation, obs_dict):
+    def update_unit_count(situation_section, obs_section):
+        for unit_type in situation_section.keys():
+            for unit in obs_section.values():
+                if isinstance(unit, dict) and unit["type"] == unit_type:
+                    situation_section[unit_type] += 1
 
-    # if done:
-    #     obs = env.reset()
-    env.close()
+    new_situation = {}
+    new_situation[FIGHT_FOR] = {unit_type: 0 for unit_type in situation[FIGHT_FOR].keys()}
+    new_situation[ENEMY] = {unit_type: 0 for unit_type in situation[ENEMY].keys()}
+
+    update_unit_count(new_situation[FIGHT_FOR], obs_dict[FIGHT_FOR])
+    update_unit_count(new_situation[ENEMY], obs_dict[ENEMY])
+
+    return new_situation, situation
+
+
+def update_tasks(tasks: List[Tuple], situation, obs_dict):
+    new_situation, old_situation = update_situation(situation, obs_dict)
+    def process_tasks(tasks, situation_key, unit_index, task_types, changes_condition):
+        for unit_type in new_situation[situation_key].keys():
+            changes = max(changes_condition(unit_type), 0)
+            for task in tasks:
+                if (
+                    task[0] in task_types
+                    and task[1][unit_index] == unit_type
+                    and changes > 0
+                ):
+                    print(f"Completed task: {task[0]}{task[1]}")
+                    tasks.remove(task)
+                    changes -= 1
+                    if changes == 0:
+                        break
+
+    process_tasks(
+        tasks,
+        FIGHT_FOR,
+        0,
+        [TASK_PRODUCE_UNIT, TASK_BUILD_BUILDING],
+        lambda unit_type: new_situation[FIGHT_FOR][unit_type]
+        - old_situation[FIGHT_FOR][unit_type],
+    )
+
+    process_tasks(
+        tasks,
+        ENEMY,
+        1,
+        [TASK_ATTACK_ENEMY],
+        lambda unit_type: old_situation[ENEMY][unit_type]
+        - new_situation[ENEMY][unit_type],
+    )
+
+    for task in tasks:
+        if task[0] == TASK_HARVEST_MINERAL:
+            is_unit_empty = not obs_dict["units"][task[1]]
+            is_unit_not_resource = obs_dict["units"][task[1]].get("type") != "resource"
+            is_base_zero = new_situation[FIGHT_FOR]["base"] == 0
+
+            if is_unit_empty or is_unit_not_resource or is_base_zero:
+                tasks.remove(task)
+
+    return tasks, new_situation
+
 
 if __name__ == "__main__":
     main()

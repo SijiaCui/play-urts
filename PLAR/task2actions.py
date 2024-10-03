@@ -169,7 +169,9 @@ def move_to_loc(
     if unit["location"] == tgt_loc:
         return noop(unit)
     direction = path_planner.get_shortest_path(tuple(unit["location"]), tgt_loc)[1]
-    return move(unit, DIRECTION_STR_MAPPING[str(direction)], action_mask)
+    if str(direction) in DIRECTION_STR_MAPPING:
+        return move(unit, DIRECTION_STR_MAPPING[str(direction)], action_mask)
+    return noop(unit)
 
 
 # ====================
