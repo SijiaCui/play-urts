@@ -8,33 +8,30 @@ ENEMY = "red"
 
 CHOSEN_MAPS = {
     # 4x4 only blue
-    '0': 'maps/4x4/baseOneWorkerMaxResources4x4.xml', # Only blue: 1 base, 1 worker; MaxResources
+    "0": "maps/4x4/baseOneWorkerMaxResources4x4.xml",  # Only blue: 1 base, 1 worker; MaxResources
     # 4x4 not balance
-    '1': 'maps/4x4/base4x4.xml', # Blue: 1 base, 1 worker; Red: 1 base; not balance
-
+    "1": "maps/4x4/base4x4.xml",  # Blue: 1 base, 1 worker; Red: 1 base; not balance
     # standard
-    '2': 'maps/4x4/basesWorkers4x4.xml', # Blue/Red: 1 base, 1 worker
-    '3': 'maps/8x8/basesWorkers8x8.xml', # Blue/Red: 1 base, 1 worker
-    '4': 'maps/16x16/basesWorkers16x16.xml', # Blue/Red: 1 base, 1 worker
+    "2": "maps/4x4/basesWorkers4x4.xml",  # Blue/Red: 1 base, 1 worker
+    "3": "maps/8x8/basesWorkers8x8.xml",  # Blue/Red: 1 base, 1 worker
+    "4": "maps/16x16/basesWorkers16x16.xml",  # Blue/Red: 1 base, 1 worker
     # standard multi-bases
-    '5': 'maps/8x8/TwoBasesWorkers8x8.xml', # Blue/Red: 2 base, 2 worker
-    '6': 'maps/8x8/ThreeBasesWorkers8x8.xml',  # Blue/Red: 3 base, 3 worker
-    '7': 'maps/8x8/FourBasesWorkers8x8.xml',  # Blue/Red: 4 base, 4 worker
-    '8': 'maps/12x12/SixBasesWorkers12x12.xml', # Blue/Red: 6 base, 6 worker
-    '9': 'maps/16x16/EightBasesWorkers16x16.xml', # Blue/Red: 8 base, 8 worker
-    '10': 'maps/EightBasesWorkers16x12.xml', # Blue/Red: 8 base, 8 worker
-
+    "5": "maps/8x8/TwoBasesWorkers8x8.xml",  # Blue/Red: 2 base, 2 worker
+    "6": "maps/8x8/ThreeBasesWorkers8x8.xml",  # Blue/Red: 3 base, 3 worker
+    "7": "maps/8x8/FourBasesWorkers8x8.xml",  # Blue/Red: 4 base, 4 worker
+    "8": "maps/12x12/SixBasesWorkers12x12.xml",  # Blue/Red: 6 base, 6 worker
+    "9": "maps/16x16/EightBasesWorkers16x16.xml",  # Blue/Red: 8 base, 8 worker
+    "10": "maps/EightBasesWorkers16x12.xml",  # Blue/Red: 8 base, 8 worker
     # 8x8 Obstacle
-    '11': 'maps/8x8/basesWorkers8x8Obstacle.xml', # Blue/Red: 1 base, 1 worker; Obstacle
-
+    "11": "maps/8x8/basesWorkers8x8Obstacle.xml",  # Blue/Red: 1 base, 1 worker; Obstacle
     # melee
-    '12': 'maps/melee4x4light2.xml',  # Blue/Red: 2 light
-    '13': 'maps/melee4x4Mixed2.xml',  # Blue/Red: 1 light, 1 heavy
-    '14': 'maps/8x8/melee8x8light4.xml', # Blue/Red: 4 light
-    '15': 'maps/8x8/melee8x8Mixed4.xml', # Blue/Red: 2 light, 2 heavy
-    '16': 'maps/8x8/melee8x8Mixed6.xml', # Blue/Red: 2 light, 2 heavy, 2 ranged
-    '17': 'maps/12x12/melee12x12Mixed12.xml', # Blue/Red: 4 light, 4 heavy, 4 ranged
-    '18': 'maps/melee14x12Mixed18.xml',  # Blue/Red: 6 light, 6 heavy, 6 ranged
+    "12": "maps/melee4x4light2.xml",  # Blue/Red: 2 light
+    "13": "maps/melee4x4Mixed2.xml",  # Blue/Red: 1 light, 1 heavy
+    "14": "maps/8x8/melee8x8light4.xml",  # Blue/Red: 4 light
+    "15": "maps/8x8/melee8x8Mixed4.xml",  # Blue/Red: 2 light, 2 heavy
+    "16": "maps/8x8/melee8x8Mixed6.xml",  # Blue/Red: 2 light, 2 heavy, 2 ranged
+    "17": "maps/12x12/melee12x12Mixed12.xml",  # Blue/Red: 4 light, 4 heavy, 4 ranged
+    "18": "maps/melee14x12Mixed18.xml",  # Blue/Red: 6 light, 6 heavy, 6 ranged
 }
 
 DIRECTION_INDEX_MAPPING = {
@@ -44,26 +41,11 @@ DIRECTION_INDEX_MAPPING = {
     "west": 3,
 }
 
-UNIT_DAMAGE_MAPPING = {
-    "worker": 1,
-    "light": 2,
-    "heavy": 4,
-    "ranged": 1
-}
+UNIT_DAMAGE_MAPPING = {"worker": 1, "light": 2, "heavy": 4, "ranged": 1}
 
-UNIT_RANGE_MAPPING = {
-    "worker": 1,
-    "light": 1,
-    "heavy": 1,
-    "ranged": 3
-}
+UNIT_RANGE_MAPPING = {"worker": 1, "light": 1, "heavy": 1, "ranged": 3}
 
-UNIT_HP_MAPPING = {
-    "worker": 1,
-    "light": 4,
-    "heavy": 4,
-    "ranged": 1
-}
+UNIT_HP_MAPPING = {"worker": 1, "light": 4, "heavy": 4, "ranged": 1}
 
 BUILDING_SPACE = ["base", "barrack"]
 ALL_UNIT_SPACE = ["worker", "light", "heavy", "ranged", "base", "barrack"]
@@ -76,26 +58,34 @@ def load_args():
     parser = argparse.ArgumentParser()
 
     # load config file to add default arguments
-    with open('/root/desc/play-urts/PLAR/configs.json', 'r') as f:
+    with open("/root/desc/play-urts/PLAR/configs.json", "r") as f:
         config = json.load(f)
 
     # game parameters
-    parser.add_argument('--max_steps', type=int, default=int(config['max_steps']))
-    parser.add_argument('--tasks_update_interval', type=int, default=int(config['tasks_update_interval']))
+    parser.add_argument("--max_steps", type=int, default=int(config["max_steps"]))
+    parser.add_argument(
+        "--tasks_update_interval",
+        type=int,
+        default=int(config["tasks_update_interval"]),
+    )
     parser.add_argument("--map_index", type=str, default=str(config["map_index"]))
 
     # llm parameters
-    parser.add_argument('--engine', type=str, default=config['llm_engine'])
-    parser.add_argument('--temperature', type=float, default=float(config['llm_engine_temperature']))
-    parser.add_argument('--max_tokens', type=int, default=int(config['llm_engine_max_tokens']))
+    parser.add_argument("--engine", type=str, default=config["llm_engine"])
+    parser.add_argument(
+        "--temperature", type=float, default=float(config["llm_engine_temperature"])
+    )
+    parser.add_argument(
+        "--max_tokens", type=int, default=int(config["llm_engine_max_tokens"])
+    )
 
     # video recorder parameters
-    parser.add_argument('--video_fps', type=int, default=int(config['video_fps']))
-    parser.add_argument('--video_length', type=int, default=int(config['video_length']))
-    parser.add_argument('--capture_video', action='store_true')
+    parser.add_argument("--video_fps", type=int, default=int(config["video_fps"]))
+    parser.add_argument("--video_length", type=int, default=int(config["video_length"]))
+    parser.add_argument("--capture_video", action="store_true")
 
     # other parameters
-    parser.add_argument('--debug', action='store_true')
+    parser.add_argument("--debug", action="store_true")
 
     return parser.parse_args()
 
@@ -126,9 +116,9 @@ def find_around_enemies(unit, obs_json):
         (unit["location"][0] + 1, unit["location"][1]),  # west
     ]
     attack_enemies = []
-    for enemy in enemies:
-        if tuple(enemy["location"]) in around_locs:
-            attack_enemies.append(enemy)
+    for ENEMY in enemies:
+        if tuple(ENEMY["location"]) in around_locs:
+            attack_enemies.append(ENEMY)
     return attack_enemies
 
 
@@ -141,7 +131,9 @@ class path_planning:
 
         self.max_dist = 10**10
         # 10**10 is disconnected
-        self.shortest_path = [[self.max_dist for _ in range(self.n)] for _ in range(self.n)]
+        self.shortest_path = [
+            [self.max_dist for _ in range(self.n)] for _ in range(self.n)
+        ]
         self.first_step = [[-1 for _ in range(self.n)] for _ in range(self.n)]
         self.run()
 
@@ -153,7 +145,8 @@ class path_planning:
             self._setup_neighbors(i)
 
         for k in range(self.n):
-            if not self.valid_map[self.index2location(k)]: continue
+            if not self.valid_map[self.index2location(k)]:
+                continue
             for i in range(self.n):
                 for j in range(self.n):
                     new_path = self.shortest_path[i][k] + self.shortest_path[k][j]
@@ -165,19 +158,23 @@ class path_planning:
         # north neighbor
         if index // self.width - 1 >= 0:
             self.shortest_path[index][index - self.width] = 1
-            self.first_step[index][index - self.width] = DIRECTION_INDEX_MAPPING['north']
+            self.first_step[index][index - self.width] = DIRECTION_INDEX_MAPPING[
+                "north"
+            ]
         # south neighbor
         if index // self.width + 1 < self.height:
             self.shortest_path[index][index + self.width] = 1
-            self.first_step[index][index + self.width] = DIRECTION_INDEX_MAPPING['south']
+            self.first_step[index][index + self.width] = DIRECTION_INDEX_MAPPING[
+                "south"
+            ]
         # east neighbor
         if index % self.width + 1 < self.width:
             self.shortest_path[index][index + 1] = 1
-            self.first_step[index][index + 1] = DIRECTION_INDEX_MAPPING['east']
+            self.first_step[index][index + 1] = DIRECTION_INDEX_MAPPING["east"]
         # west neighbor
-        if index % self.width -1 >= 0:
+        if index % self.width - 1 >= 0:
             self.shortest_path[index][index - 1] = 1
-            self.first_step[index][index - 1] = DIRECTION_INDEX_MAPPING['west']
+            self.first_step[index][index - 1] = DIRECTION_INDEX_MAPPING["west"]
 
     def location2index(self, location: tuple) -> int:
         return location[0] * self.width + location[1]
@@ -186,15 +183,19 @@ class path_planning:
         return (index // self.width, index % self.width)
 
     def get_shortest_path(self, location, tg_location) -> Tuple[int, int]:
-        '''
-        output: 
+        """
+        output:
             int: path length
             int: direction
-        '''
+        """
         if location == tg_location:
             return 0, None
-        sp = self.shortest_path[self.location2index(location)][self.location2index(tg_location)]
-        fs = self.first_step[self.location2index(location)][self.location2index(tg_location)]
+        sp = self.shortest_path[self.location2index(location)][
+            self.location2index(tg_location)
+        ]
+        fs = self.first_step[self.location2index(location)][
+            self.location2index(tg_location)
+        ]
 
         return sp, fs
         if sp < self.max_dist:
@@ -203,17 +204,19 @@ class path_planning:
             # cant find any path
             return None
 
-    def get_path_nearest(self, location: tuple, targets: List[tuple]) -> int:
+    def get_path_nearest(self, location: tuple, targets: List[tuple]) -> tuple:
         min_i = 0
         min_path = self.max_dist
         for i in range(len(targets)):
-            cur_path = self.shortest_path[self.location2index(location)][self.location2index(targets[i])]
+            cur_path = self.shortest_path[self.location2index(location)][
+                self.location2index(targets[i])
+            ]
             if cur_path < min_path:
                 min_i = i
                 min_path = cur_path
         return targets[min_i]
 
-    def get_manhattan_nearest(self, location: tuple, targets: List[tuple]) -> int:
+    def get_manhattan_nearest(self, location: tuple, targets: List[tuple]) -> tuple:
         min_i = 0
         min_dist = self.max_dist
         for i in range(len(targets)):
@@ -227,7 +230,7 @@ class path_planning:
         locs = []
         for i in range(self.height):
             for j in range(self.width):
-                if manhattan_distance(tgt_loc, (i ,j)) <= dist:
+                if manhattan_distance(tgt_loc, (i, j)) <= dist:
                     locs.append((i, j))
         return locs
 

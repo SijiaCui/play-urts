@@ -191,7 +191,7 @@ class MicroRTSGridModePLARVecEnv:
         responses = self.vec_client.reset([0] * self.num_envs)
         obs = [np.array(ro) for ro in responses.observation]
 
-        return (np.array(obs), np.array(responses.resources))
+        return list(zip(obs, np.array(responses.resources)))
 
     def step_async(self, actions):
         actions = actions.reshape((self.num_envs, self.width * self.height, -1))
@@ -234,7 +234,7 @@ class MicroRTSGridModePLARVecEnv:
                         p1_response = self.vec_client.selfPlayClients[done_idx // 2].getResponse(1)
                         obs[done_idx] = self._encode_obs(np.array(p0_response.observation))
                         obs[done_idx + 1] = self._encode_obs(np.array(p1_response.observation))
-        return (np.array(obs), np.array(responses.resources)), reward @ self.reward_weight, done[:, 0], infos
+        return list(zip(obs, np.array(responses.resources))), reward @ self.reward_weight, done[:, 0], infos
 
     def step(self, ac):
         self.step_async(ac)

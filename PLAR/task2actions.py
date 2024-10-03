@@ -163,6 +163,7 @@ def task_attack_enemy(
 #      Subtasks
 # ====================
 
+
 def move_to_loc(
     unit: dict, tgt_loc: tuple, path_planner: path_planning, action_mask: np.ndarray
 ) -> np.ndarray:
@@ -347,13 +348,15 @@ def attack(unit: dict, tgt_loc: tuple, action_mask: np.ndarray) -> np.ndarray:
     action[0] = ACTION_INDEX_MAPPING["attack"]
     action[6] = tgt_relative_loc
     print_action_info(unit, f"attack {tgt_loc}")
-    return action    
+    return action
 
 
 def print_action_info(unit, action):
     if unit["action"] != "noop":
         action = unit["action"]
-    print(f"{unit['type']}{tuple(unit['location'])}: {unit['task_type']}{unit['task_params']}/{action}")
+    print(
+        f"{unit['type']}{tuple(unit['location'])}: {unit['task_type']}{unit['task_params']}/{action}"
+    )
 
 
 # ====================
@@ -365,5 +368,5 @@ TASK_ACTION_MAPPING = {
     TASK_HARVEST_MINERAL: task_harvest_mineral,
     TASK_BUILD_BUILDING: task_build_building,
     TASK_PRODUCE_UNIT: task_produce_unit,
-    TASK_ATTACK_ENEMY: task_attack_enemy
+    TASK_ATTACK_ENEMY: task_attack_enemy,
 }

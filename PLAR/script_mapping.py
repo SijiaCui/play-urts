@@ -10,9 +10,16 @@ from PLAR.task2actions import (
     TASK_BUILD_BUILDING,
     TASK_PRODUCE_UNIT,
     TASK_ATTACK_ENEMY,
-    TASK_ACTION_MAPPING
+    TASK_ACTION_MAPPING,
 )
-from PLAR.utils.utils import path_planning, ENEMY, UNIT_DAMAGE_MAPPING, FIGHT_FOR, UNIT_RANGE_MAPPING
+from PLAR.utils.utils import (
+    path_planning,
+    get_direction,
+    UNIT_DAMAGE_MAPPING,
+    UNIT_RANGE_MAPPING,
+)
+
+import PLAR.utils.utils as utils
 
 from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
 from stable_baselines3.common.vec_env import VecVideoRecorder
@@ -24,11 +31,12 @@ __all__ = ["script_mapping"]
 #     Assign Tasks
 # ====================
 
+
 def task_assign(
     tasks: List[Tuple],
     obs_dict: Dict,
     path_planner: path_planning,
-    auto_attack: bool = False
+    auto_attack: bool = False,
 ) -> List[Dict]:
     """Assign tasks to units based on their parameters.
 
@@ -41,7 +49,11 @@ def task_assign(
     Returns:
         List[Dict]: list of assigned units
     """
-    exist_units = {unit_id: unit_dict for unit_id, unit_dict in obs_dict[FIGHT_FOR].items() if isinstance(unit_dict, dict)}
+    exist_units = {
+        unit_id: unit_dict
+        for unit_id, unit_dict in obs_dict[utils.FIGHT_FOR].items()
+        if isinstance(unit_dict, dict)
+    }
 
     for task in tasks:
         exist_units = ASSIGN_TASK_MAPPING[task[0]](task[1], exist_units, obs_dict, path_planner)
@@ -70,7 +82,9 @@ def assign_task_deploy_unit(
     min_path_len = 1e9
     for unit in exist_units.values():
         if unit["task_type"] == "[noop]" and unit["type"] == task_params[0]:
-            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
+            path_len, _ = path_planner.get_shortest_path(
+                unit["location"], task_params[1]
+            )
             if path_len < min_path_len:
                 closest_unit_id = unit["id"]
                 min_path_len = path_len
@@ -83,10 +97,7 @@ def assign_task_deploy_unit(
 
 
 def assign_task_harvest_mineral(
-    task_params: List, 
-    exist_units: Dict, 
-    obs_dict: Dict, 
-    path_planner: path_planning
+    task_params: List, exist_units: Dict, obs_dict: Dict, path_planner: path_planning
 ) -> Union[Dict, bool]:
     # [Harvest Mineral](mineral_loc)
     closest_unit_id = -1
@@ -94,7 +105,7 @@ def assign_task_harvest_mineral(
     for unit in exist_units.values():
         if unit["task_type"] == "[noop]" and unit["type"] == "worker":
             path_len, _ = path_planner.get_shortest_path(unit["location"], task_params)
-            if path_len  < min_path_len:
+            if path_len < min_path_len:
                 closest_unit_id = unit["id"]
                 min_path_len = path_len
     if closest_unit_id != -1:
@@ -106,17 +117,16 @@ def assign_task_harvest_mineral(
 
 
 def assign_task_build_building(
-    task_params: List, 
-    exist_units: Dict, 
-    obs_dict: Dict, 
-    path_planner: path_planning
+    task_params: List, exist_units: Dict, obs_dict: Dict, path_planner: path_planning
 ) -> Union[Dict, bool]:
     # [Build Building](building_type, building_loc)
     closest_unit_id = -1
     min_path_len = 1e9
     for unit in exist_units.values():
         if unit["task_type"] == "[noop]" and unit["type"] == "worker":
-            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
+            path_len, _ = path_planner.get_shortest_path(
+                unit["location"], task_params[1]
+            )
             if path_len < min_path_len:
                 closest_unit_id = unit["id"]
                 min_path_len = path_len
@@ -149,23 +159,31 @@ def assign_task_produce_unit(
 
 
 def assign_task_attack_enemy(
-    task_params: List,
-    exist_units: Dict,
-    obs_dict: Dict,
-    path_planner: path_planning
+    task_params: List, exist_units: Dict, obs_dict: Dict, path_planner: path_planning
 ) -> Union[Dict, bool]:
     # [Attack Enemy](unit_type, enemy_type)
-    # TODO: Can we assign the closet unit to do this?    
-    assigned = False
+    closest_dist = {}
+    enemy_locs = []
+    for enemy in obs_dict[utils.ENEMY].values():
+        if isinstance(enemy, dict) and enemy["type"] == task_params[1]:
+            enemy_locs.append(enemy["location"])
+    if len(enemy_locs) == 0:
+        print(f"Pending task: {TASK_ATTACK_ENEMY}{task_params}")
+        return exist_units
     for unit in exist_units.values():
         if unit["task_type"] == "[noop]" and unit["type"] == task_params[0]:
-            exist_units[unit["id"]]["task_type"] = TASK_ATTACK_ENEMY
-            exist_units[unit["id"]]["task_params"] = task_params
-            assigned = True
-            break
-    if not assigned:
+            nearest_loc = path_planner.get_path_nearest(unit["location"], enemy_locs)
+            closest_dist[unit["id"]], _ = path_planner.get_shortest_path(
+                unit["location"], nearest_loc
+            )
+    if len(closest_dist) > 0:
+        unit_id = min(closest_dist, key=closest_dist.get)
+        exist_units[unit_id]["task_type"] = TASK_ATTACK_ENEMY
+        exist_units[unit_id]["task_params"] = task_params
+        return exist_units
+    else:
         print(f"Pending task: {TASK_ATTACK_ENEMY}{task_params}")
-    return exist_units
+        return exist_units
 
 
 ASSIGN_TASK_MAPPING = {
@@ -181,12 +199,13 @@ ASSIGN_TASK_MAPPING = {
 #    Script Mapping
 # ====================
 
+
 def script_mapping(
-    env: Union[MicroRTSGridModeVecEnv, VecVideoRecorder], 
+    env: Union[MicroRTSGridModeVecEnv, VecVideoRecorder],
     tasks: List[Tuple],
     obs_dict: Dict,
     assigned_units: List,
-    auto_attack: bool = False
+    auto_attack: bool = False,
 ) -> np.ndarray:
     """
     Mapping tasks to action vectors.
@@ -204,6 +223,7 @@ def script_mapping(
     width = obs_dict["env"]["width"]
 
     action_masks = env.get_action_mask()
+    action_masks = action_masks[0] if utils.FIGHT_FOR == "blue" else action_masks[1]
     action_masks = action_masks.reshape(-1, action_masks.shape[-1])
 
     path_planer = path_planning(compute_valid_map(obs_dict))
@@ -212,7 +232,9 @@ def script_mapping(
     action_vectors = np.zeros((height * width, 7), dtype=int)
     for unit in assigned_units:
         index = unit["location"][0] * width + unit["location"][1]
-        task_params = ADAPT_TASK_PARAMS_MAPPING[unit["task_type"]](unit, obs_dict, path_planer)
+        task_params = ADAPT_TASK_PARAMS_MAPPING[unit["task_type"]](
+            unit, obs_dict, path_planer
+        )
         action_vectors[index] = TASK_ACTION_MAPPING[unit["task_type"]](
             unit,
             *task_params,
@@ -227,7 +249,8 @@ def adapt_task_harvest_mineral_params(unit, obs_dict, path_planner: path_plannin
     mineral_loc = unit["task_params"]
     tgt_locs = get_around_locs(mineral_loc, obs_dict)
     tgt_loc = path_planner.get_manhattan_nearest(unit["location"], tgt_locs)
-    for _unit in obs_dict[FIGHT_FOR].values():
+    base_loc = (1, 2)
+    for _unit in obs_dict[utils.FIGHT_FOR].values():
         if isinstance(_unit, dict) and _unit["type"] == "base":
             base_loc = _unit["location"]
             break
@@ -248,12 +271,16 @@ def adapt_task_attack_enemy_params(unit, obs_dict, path_planner: path_planning):
     # [Attack Enemy](unit_type, enemy_type) -> [Attack Enemy](unit_type, enemy_type, enemy_loc, tgt_loc)
     unit_type, enemy_type = unit["task_params"]
     enemy_locs = []
-    for enemy in obs_dict[ENEMY].values():
+    for enemy in obs_dict[utils.ENEMY].values():
         if isinstance(enemy, dict) and enemy["type"] == enemy_type:
             enemy_locs.append(enemy["location"])
+    if len(enemy_locs) == 0:
+        return (unit_type, enemy_type, (0, 0), unit["location"])
     enemy_loc = path_planner.get_path_nearest(unit["location"], enemy_locs)
 
-    tgt_locs = path_planner.get_locs_with_dist_to_tgt(enemy_loc, UNIT_RANGE_MAPPING[unit_type])
+    tgt_locs = path_planner.get_locs_with_dist_to_tgt(
+        enemy_loc, UNIT_RANGE_MAPPING[unit_type]
+    )
     tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
     return (unit_type, enemy_type, enemy_loc, tgt_loc)
 
@@ -263,6 +290,15 @@ def adapt_task_deploy_unit_params(unit, obs_dict, path_planner: path_planning):
 
 
 def adapt_task_produce_unit_params(unit, obs_dict, path_planner: path_planning):
+    # [Produce Unit](produce_type, direction)
+    direction = unit["task_params"][1]
+    loc = get_direction_loc(unit, direction)
+    if loc in obs_dict["units"] and obs_dict["units"][loc] == {}:
+        return unit["task_params"]
+    around_locs = get_around_locs(unit["location"], obs_dict)
+    for loc in around_locs:
+        if loc in obs_dict["units"] and obs_dict["units"][loc] == {}:
+            return (unit["task_params"][0], get_direction(unit["location"], loc))
     return unit["task_params"]
 
 
@@ -273,6 +309,17 @@ ADAPT_TASK_PARAMS_MAPPING = {
     TASK_HARVEST_MINERAL: adapt_task_harvest_mineral_params,
     TASK_BUILD_BUILDING: adapt_task_build_building_params,
 }
+
+
+def get_direction_loc(unit, direction):
+    if direction == "north":
+        return (unit["location"][0] - 1, unit["location"][1])
+    elif direction == "south":
+        return (unit["location"][0] + 1, unit["location"][1])
+    elif direction == "east":
+        return (unit["location"][0], unit["location"][1] + 1)
+    elif direction == "west":
+        return (unit["location"][0], unit["location"][1] - 1)
 
 
 def get_around_locs(loc, obs_dict):
@@ -289,7 +336,9 @@ def get_around_locs(loc, obs_dict):
 
 
 def compute_valid_map(obs_dict):
-    valid_map = np.ones((obs_dict["env"]["height"], obs_dict["env"]["width"]), dtype=int)
+    valid_map = np.ones(
+        (obs_dict["env"]["height"], obs_dict["env"]["width"]), dtype=int
+    )
     for loc, unit in obs_dict["units"].items():
         if unit != {}:
             valid_map[unit["location"][0], unit["location"][1]] = 0
@@ -311,12 +360,32 @@ def auto_choose_target(unit: dict, obs_dict: dict, path_planner: path_planning) 
     # 优先攻击可以杀死的重轻远工兵营基地
     # 如果都不能一击毙命，则优先攻击重轻远工兵营基地
     loc = unit["location"]
-    targets_locs = path_planner.get_locs_with_dist_to_tgt(loc, UNIT_RANGE_MAPPING[unit["type"]])
+    targets_locs = path_planner.get_locs_with_dist_to_tgt(
+        loc, UNIT_RANGE_MAPPING[unit["type"]]
+    )
 
-    targets = [obs_dict["units"][loc] for loc in targets_locs if loc in obs_dict["units"] and obs_dict["units"][loc] != {} and obs_dict["units"][loc]["owner"] == ENEMY]
+    targets = [
+        obs_dict["units"][loc]
+        for loc in targets_locs
+        if loc in obs_dict["units"]
+        and obs_dict["units"][loc] != {}
+        and obs_dict["units"][loc]["owner"] == utils.ENEMY
+    ]
 
-    enemy_hp = np.array([target["hp"] for target in targets if target != {} and target["owner"] == ENEMY])
-    enemy_type = np.array([target["type"] for target in targets if target != {} and target["owner"] == ENEMY])
+    enemy_hp = np.array(
+        [
+            target["hp"]
+            for target in targets
+            if target != {} and target["owner"] == utils.ENEMY
+        ]
+    )
+    enemy_type = np.array(
+        [
+            target["type"]
+            for target in targets
+            if target != {} and target["owner"] == utils.ENEMY
+        ]
+    )
 
     if len(enemy_hp) == 0:
         return {}

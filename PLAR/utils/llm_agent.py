@@ -4,7 +4,8 @@ from langchain_openai import AzureChatOpenAI
 
 from langchain_core.messages import HumanMessage
 
-from PLAR.utils.prompts import zero_shot_prompt, few_shot_prompt, prompt_w_tip, prompt_w_opponent, MANUAL, OPPONENT, TASK_SPACE, EXAMPLES, TIP
+from PLAR.utils.prompts import zero_shot_prompt, few_shot_prompt, prompt_w_tip, prompt_w_opponent, MANUAL, OPPONENT, TASK_SPACE, BLUE_EXAMPLES, TIP, RED_EXAMPLES
+import PLAR.utils.utils as utils
 
 class LLMAgent:
     def __init__(self, args) -> None:
@@ -25,12 +26,17 @@ class LLMAgent:
         return response
 
     def _agent_prompt(self) -> str:
+        if utils.FIGHT_FOR == "blue":
+            EXAMPLES = BLUE_EXAMPLES
+        else:
+            EXAMPLES = RED_EXAMPLES
         kwargs = {
             "manual": MANUAL,
             "task_space": TASK_SPACE,
             "examples": EXAMPLES,
             "observation": self.obs,
             "tip": TIP,
+            "fight_for": utils.FIGHT_FOR,
         }
 
         return self.prompt.format(**kwargs)
@@ -39,7 +45,6 @@ class LLMAgent:
         LLM_DEBUG = self.args.debug
         if LLM_DEBUG: print(f"{'-'*20}#{self.__class__.__name__} START DEBUGGING#{'-'*20}", flush=True)
         prompt_content = self._agent_prompt()
-        print(prompt_content)
         if LLM_DEBUG: print(f"PROMPT: {self.prompt.input_variables}\n{prompt_content}", flush=True)
 
         try:
