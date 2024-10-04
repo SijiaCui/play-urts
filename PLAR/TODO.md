@@ -51,6 +51,18 @@ LLM/CoT/ReAct
 - [x] units 都没有 ID，不知道谁是谁
 - [x] ！！！玩家资源 obs 一直是 0（环境问题）
 
+# 1006
+## SijiaCui
+- [ ] Paper: Formulation/Method/Framework
+- [ ] Check Env
+
+## ShuaiXu
+- [ ] two player? LLMs vs LLMs -> (reasoning cability)
+- [ ] different LLMs vs Random/RandomBiased/... (videos record/logs), 3/5 matches, metrics?
+
+## AiyaoHe
+- [ ] Paper: Related Work
+
 # 1003
 ## SijiaCui
 - [ ] Paper: Abstract
