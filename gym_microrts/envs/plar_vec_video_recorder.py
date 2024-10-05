@@ -28,7 +28,7 @@ class PLARVecVideoRecorder(VecEnvWrapper):
         video_folder: str,
         record_video_trigger: Callable[[int], bool],
         video_length: int = 200,
-        name_prefix: str = "rl-video",
+        name_prefix: str = "",
     ):
 
         VecEnvWrapper.__init__(self, venv)
@@ -78,7 +78,10 @@ class PLARVecVideoRecorder(VecEnvWrapper):
     def start_video_recorder(self) -> None:
         self.close_video_recorder()
 
-        video_name = f"{self.name_prefix}-record-{self.record_id}-step-{self.step_id}-to-{self.step_id + self.video_length}"
+        if self.name_prefix == "":
+            video_name = f"record-{self.record_id}-step-{self.step_id}-to-{self.step_id + self.video_length}"
+        else:
+            video_name = f"{self.name_prefix}-record-{self.record_id}-step-{self.step_id}-to-{self.step_id + self.video_length}"
         base_path = os.path.join(self.video_folder, video_name)
         self.video_recorder = video_recorder.VideoRecorder(
             env=self.env, base_path=base_path, metadata={"step_id": self.step_id}

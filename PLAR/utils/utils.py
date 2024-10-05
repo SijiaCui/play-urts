@@ -1,5 +1,3 @@
-import ast
-
 from typing import Tuple, List
 
 
@@ -52,32 +50,27 @@ ALL_UNIT_SPACE = ["worker", "light", "heavy", "ranged", "base", "barrack"]
 
 
 def load_args():
-    import json
+    import yaml
     import argparse
 
     parser = argparse.ArgumentParser()
 
     # load config file to add default arguments
-    with open("/root/desc/play-urts/PLAR/configs.json", "r") as f:
-        config = json.load(f)
+    with open("/root/desc/play-urts/PLAR/configs/configs.yaml", "r") as f:
+        config = yaml.safe_load(f)
 
     # game parameters
     parser.add_argument("--max_steps", type=int, default=int(config["max_steps"]))
-    parser.add_argument(
-        "--tasks_update_interval",
-        type=int,
-        default=int(config["tasks_update_interval"]),
-    )
+    parser.add_argument("--tasks_update_interval", type=int, default=int(config["tasks_update_interval"]))
     parser.add_argument("--map_index", type=str, default=str(config["map_index"]))
 
     # llm parameters
-    parser.add_argument("--engine", type=str, default=config["llm_engine"])
-    parser.add_argument(
-        "--temperature", type=float, default=float(config["llm_engine_temperature"])
-    )
-    parser.add_argument(
-        "--max_tokens", type=int, default=int(config["llm_engine_max_tokens"])
-    )
+    parser.add_argument("--blue", type=str, default=config["blue"])
+    parser.add_argument("--red", type=str, default=config["red"])
+    parser.add_argument("--temperature", type=float, default=float(config["llm_engine_temperature"]))
+    parser.add_argument("--max_tokens", type=int, default=int(config["llm_engine_max_tokens"]))
+    parser.add_argument("--blue_prompt", type=list, default=config["blue_prompt"])
+    parser.add_argument("--red_prompt", type=list, default=config["red_prompt"])
 
     # video recorder parameters
     parser.add_argument("--video_fps", type=int, default=int(config["video_fps"]))
@@ -103,23 +96,10 @@ def get_direction(location, tgt_loc) -> str:
         return "east"
     elif tgt_loc[1] < location[1]:
         return "west"
+    elif tgt_loc == location:
+        return "stay"
     else:
-        raise ValueError("I only live in two dimensions.")
-
-
-def find_around_enemies(unit, obs_json):
-    enemies = obs_json[ENEMY]
-    around_locs = [
-        (unit["location"][0], unit["location"][1] - 1),  # north
-        (unit["location"][0] - 1, unit["location"][1]),  # east
-        (unit["location"][0], unit["location"][1] + 1),  # south
-        (unit["location"][0] + 1, unit["location"][1]),  # west
-    ]
-    attack_enemies = []
-    for ENEMY in enemies:
-        if tuple(ENEMY["location"]) in around_locs:
-            attack_enemies.append(ENEMY)
-    return attack_enemies
+        raise ValueError(f"I only live in two dimensions. {location} -> {tgt_loc}")
 
 
 class path_planning:
@@ -236,32 +216,30 @@ class path_planning:
 
 
 def parse_task(text: str) -> list:
-    from PLAR.task2actions import TASK_SPACE
+    import ast
+    from PLAR.grounding import TASK_SPACE
 
     task_list = []
     params_list = []
-    try:
-        text = text.split("START of PLAN")[1].split("END of PLAN")[0]
-        text_list = text.split("\n")
-        for task_with_params in text_list:
-            task_beg = task_with_params.find("[")
-            task_end = task_with_params.find("]")
-            param_beg = task_with_params.find("(")
-            param_end = task_with_params.rfind(")")
-            if (
-                task_beg + 1
-                and task_end + 1
-                and task_with_params[task_beg : task_end + 1] in TASK_SPACE
-            ):
-                task = task_with_params[task_beg : task_end + 1]
-            if param_beg + 1 and param_end + 1:
-                params = ast.literal_eval(task_with_params[param_beg : param_end + 1])
-                task, params = params_valid(task, params)
-                if task is not None:
-                    task_list.append(task)
-                    params_list.append(params)
-    except Exception as e:
-        print(f"Response Processing Error: {e}")
+    text = text.split("START OF TASK")[1].split("END OF TASK")[0]
+    text_list = text.split("\n")
+    for task_with_params in text_list:
+        task_beg = task_with_params.find("[")
+        task_end = task_with_params.find("]")
+        param_beg = task_with_params.find("(")
+        param_end = task_with_params.rfind(")")
+        if (
+            task_beg + 1
+            and task_end + 1
+            and task_with_params[task_beg : task_end + 1] in TASK_SPACE
+        ):
+            task = task_with_params[task_beg : task_end + 1]
+        if param_beg + 1 and param_end + 1:
+            params = ast.literal_eval(task_with_params[param_beg : param_end + 1])
+            task, params = params_valid(task, params)
+            if task is not None:
+                task_list.append(task)
+                params_list.append(params)
     print("Parsed Tasks from LLM's Respond:")
     for task, params in zip(task_list, params_list):
         print(task, params)
@@ -269,7 +247,7 @@ def parse_task(text: str) -> list:
 
 
 def params_valid(task, params):
-    from PLAR.task2actions import (
+    from PLAR.grounding import (
         TASK_DEPLOY_UNIT,
         TASK_HARVEST_MINERAL,
         TASK_BUILD_BUILDING,
@@ -315,3 +293,57 @@ def params_valid(task, params):
             return task, params
 
     return None, None
+
+
+def update_situation(situation, obs_dict):
+    import PLAR.utils as utils
+
+    def update_unit_count(situation_section, obs_section):
+        for unit_type in situation_section.keys():
+            for unit in obs_section.values():
+                if isinstance(unit, dict) and unit["type"] == unit_type:
+                    situation_section[unit_type] += 1
+
+    new_situation = {}
+    new_situation[utils.FIGHT_FOR] = {unit_type: 0 for unit_type in situation[utils.FIGHT_FOR].keys()}
+    new_situation[utils.ENEMY] = {unit_type: 0 for unit_type in situation[utils.ENEMY].keys()}
+
+    update_unit_count(new_situation[utils.FIGHT_FOR], obs_dict[utils.FIGHT_FOR])
+    update_unit_count(new_situation[utils.ENEMY], obs_dict[utils.ENEMY])
+
+    return new_situation, situation
+
+
+def update_tasks(tasks: List[Tuple], situation, obs_dict):
+    import PLAR.utils as utils
+    from PLAR.grounding import TASK_HARVEST_MINERAL, TASK_BUILD_BUILDING, TASK_PRODUCE_UNIT, TASK_ATTACK_ENEMY
+
+    new_situation, old_situation = update_situation(situation, obs_dict)
+
+    def process_tasks(tasks, situation_key, unit_index, task_types, changes_condition):
+        for unit_type in new_situation[situation_key].keys():
+            changes = max(changes_condition(unit_type), 0)
+            for task in tasks:
+                if (task[0] in task_types and task[1][unit_index] == unit_type and changes > 0):
+                    print(f"Completed task: {task[0]}{task[1]}")
+                    tasks.remove(task)
+                    changes -= 1
+                    if changes == 0:
+                        break
+
+    process_tasks(tasks, utils.FIGHT_FOR, 0, [TASK_PRODUCE_UNIT, TASK_BUILD_BUILDING],
+        lambda unit_type: new_situation[utils.FIGHT_FOR][unit_type] - old_situation[utils.FIGHT_FOR][unit_type])
+
+    process_tasks(tasks, utils.ENEMY, 1, [TASK_ATTACK_ENEMY],
+        lambda unit_type: old_situation[utils.ENEMY][unit_type] - new_situation[utils.ENEMY][unit_type])
+
+    for task in tasks:
+        if task[0] == TASK_HARVEST_MINERAL:
+            is_unit_empty = not obs_dict["units"][task[1]]
+            is_unit_not_resource = obs_dict["units"][task[1]].get("type") != "resource"
+            is_base_zero = new_situation[utils.FIGHT_FOR]["base"] == 0
+
+            if is_unit_empty or is_unit_not_resource or is_base_zero:
+                tasks.remove(task)
+
+    return tasks, new_situation

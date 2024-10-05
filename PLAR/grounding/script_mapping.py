@@ -4,7 +4,7 @@ from typing import List, Dict, Union, Tuple
 
 __all__ = ["script_mapping"]
 
-from PLAR.task2actions import (
+from .task2actions import (
     TASK_DEPLOY_UNIT,
     TASK_HARVEST_MINERAL,
     TASK_BUILD_BUILDING,
@@ -19,7 +19,7 @@ from PLAR.utils.utils import (
     UNIT_RANGE_MAPPING,
 )
 
-import PLAR.utils.utils as utils
+import PLAR.utils as utils
 
 from gym_microrts.envs.vec_env import MicroRTSGridModeVecEnv
 from stable_baselines3.common.vec_env import VecVideoRecorder
@@ -35,8 +35,7 @@ __all__ = ["script_mapping"]
 def task_assign(
     tasks: List[Tuple],
     obs_dict: Dict,
-    path_planner: path_planning,
-    auto_attack: bool = False,
+    path_planner: path_planning
 ) -> List[Dict]:
     """Assign tasks to units based on their parameters.
 
@@ -44,7 +43,6 @@ def task_assign(
         tasks (List[Tuple]): list of tasks, each task is a tuple of (task_type, task_params)
         obs_dict (Dict): observations dictionary
         path_planner (path_planning): plans path for units
-        auto_attack (bool, optional): whether to automatically attack enemies if they are within range. Defaults to False.
 
     Returns:
         List[Dict]: list of assigned units
@@ -203,9 +201,7 @@ ASSIGN_TASK_MAPPING = {
 def script_mapping(
     env: Union[MicroRTSGridModeVecEnv, VecVideoRecorder],
     tasks: List[Tuple],
-    obs_dict: Dict,
-    assigned_units: List,
-    auto_attack: bool = False,
+    obs_dict: Dict
 ) -> np.ndarray:
     """
     Mapping tasks to action vectors.
@@ -227,14 +223,12 @@ def script_mapping(
     action_masks = action_masks.reshape(-1, action_masks.shape[-1])
 
     path_planer = path_planning(compute_valid_map(obs_dict))
-    assigned_units = task_assign(tasks, obs_dict, path_planer, auto_attack)
+    assigned_units = task_assign(tasks, obs_dict, path_planer)
 
     action_vectors = np.zeros((height * width, 7), dtype=int)
     for unit in assigned_units:
         index = unit["location"][0] * width + unit["location"][1]
-        task_params = ADAPT_TASK_PARAMS_MAPPING[unit["task_type"]](
-            unit, obs_dict, path_planer
-        )
+        task_params = ADAPT_TASK_PARAMS_MAPPING[unit["task_type"]](unit, obs_dict, path_planer)
         action_vectors[index] = TASK_ACTION_MAPPING[unit["task_type"]](
             unit,
             *task_params,
@@ -248,21 +242,29 @@ def adapt_task_harvest_mineral_params(unit, obs_dict, path_planner: path_plannin
     # (mineral_loc) -> (mineral_loc, tgt_loc, base_loc, return_loc)
     mineral_loc = unit["task_params"]
     tgt_locs = get_around_locs(mineral_loc, obs_dict)
+    for loc in tgt_locs:
+        if obs_dict["units"][loc] != {} and unit["location"] != loc:
+            tgt_locs.remove(loc)
     tgt_loc = path_planner.get_manhattan_nearest(unit["location"], tgt_locs)
-    base_loc = (1, 2)
     for _unit in obs_dict[utils.FIGHT_FOR].values():
         if isinstance(_unit, dict) and _unit["type"] == "base":
             base_loc = _unit["location"]
-            break
-    return_locs = get_around_locs(base_loc, obs_dict)
-    return_loc = path_planner.get_manhattan_nearest(unit["location"], return_locs)
-    return (mineral_loc, tgt_loc, base_loc, return_loc)
+            return_locs = get_around_locs(base_loc, obs_dict)
+            for loc in return_locs:
+                if obs_dict["units"][loc] != {} and unit["location"] != loc:
+                    return_locs.remove(loc)
+            return_loc = path_planner.get_manhattan_nearest(unit["location"], return_locs)
+            return (mineral_loc, tgt_loc, base_loc, return_loc)
+    return (mineral_loc, unit["location"], unit["location"], unit["location"])
 
 
 def adapt_task_build_building_params(unit, obs_dict, path_planner: path_planning):
     # (building_type, building_loc) -> (building_type, building_loc, tgt_loc)
     building_type, building_loc = unit["task_params"]
     tgt_locs = get_around_locs(building_loc, obs_dict)
+    for tgt_loc in tgt_locs:
+        if obs_dict["units"][tgt_loc] != {} and unit["location"] != tgt_loc:
+            tgt_locs.remove(tgt_loc)
     tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
     return (building_type, building_loc, tgt_loc)
 

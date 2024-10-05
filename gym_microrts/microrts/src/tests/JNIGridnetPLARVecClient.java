@@ -225,7 +225,6 @@ public class JNIGridnetPLARVecClient {
                         terminalReward1[j] = rs[i].reward[j];
                         terminalDone1[j] = rs[i].done[j];
                     }
-                    botClients[i].reset(players[i]);
                     for (int j = 0; j < terminalReward1.length; j++) {
                         rs[i].reward[j] = terminalReward1[j];
                         rs[i].done[j] = terminalDone1[j];
@@ -258,7 +257,6 @@ public class JNIGridnetPLARVecClient {
                     terminalDone2[j] = rs[i*2+1].done[j];
                 }
 
-                selfPlayClients[i].reset();
                 for (int j = 0; j < terminalReward1.length; j++) {
                     rs[i*2].reward[j] = terminalReward1[j];
                     rs[i*2].done[j] = terminalDone1[j];
@@ -282,7 +280,6 @@ public class JNIGridnetPLARVecClient {
                     terminalReward1[j] = rs[i].reward[j];
                     terminalDone1[j] = rs[i].done[j];
                 }
-                clients[i-selfPlayClients.length*2].reset(players[i]);
                 for (int j = 0; j < rs[i].reward.length; j++) {
                     rs[i].reward[j] = terminalReward1[j];
                     rs[i].done[j] = terminalDone1[j];

@@ -1,133 +1,62 @@
+import sys
+import os
 import numpy as np
-from typing import Tuple, List
-
-from PLAR.script_mapping import script_mapping
-from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args
-from PLAR.obs2text import obs_2_text
-from PLAR.utils.llm_agent import LLMAgent
-from PLAR.task2actions import (
-    TASK_HARVEST_MINERAL,
-    TASK_BUILD_BUILDING,
-    TASK_PRODUCE_UNIT,
-    TASK_ATTACK_ENEMY,
-)
-import PLAR.utils.utils as utils
+import PLAR.utils as utils
+from PLAR.grounding import obs_2_text, script_mapping
+from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks
+from PLAR.llm_agents import LLMAgent
 from PLAR.utils.map_info import MAP_INFO
-
-# import env
+from PLAR.utils.metric import Metric
 from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
 from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
 
 
-def main():
-    # ====================
-    #        Init
-    # ====================
-    args = load_args()
-    llm_agents = [LLMAgent(args), LLMAgent(args)]
+# ====================
+#        Utils
+# ====================
 
-    map_name = CHOSEN_MAPS[str(args.map_index)]
-    situation = MAP_INFO[args.map_index]
+def init_environment(args, map_name):
+    """Initialize the environment and video recorder."""
     env = MicroRTSGridModePLARVecEnv(
         num_selfplay_envs=2,
         num_bot_envs=0,
         max_steps=args.max_steps,
         map_paths=[map_name],
-        reward_weight=np.array([10.0, 1.0, 1.0, 0.2, 1.0, 4.0]),
+        reward_weight=np.array([10, 0, 0, 0, 0, 0]),
         autobuild=False,
     )
     env.metadata["video.frames_per_second"] = args.video_fps
     name_prefix = map_name.split("maps/")[-1].split(".xml")[0].replace("/", "-")
-    env = PLARVecVideoRecorder(env, "videos", lambda x: True, args.video_length, name_prefix)
-    obs = env.reset()
-    blue_tasks, red_tasks = [], []
-
-    # ====================
-    #        Playing
-    # ====================
-    for i in range(args.max_steps):
-        print(f"{'-'*20} step-{i} {'-'*20}")
-        blue_action_vectors, blue_tasks = get_action_vectors(i, env, obs, situation, args.tasks_update_interval, blue_tasks, llm_agents[0], "blue")
-        red_action_vectors, red_tasks = get_action_vectors(i, env, obs, situation, args.tasks_update_interval, red_tasks, llm_agents[1], "red")
-        obs, reward, done, info = env.step(np.array([blue_action_vectors, red_action_vectors]))
-
-        if done[0]:
-            env.close()
-            print(f"Game over, reward: {reward}")
-            break
-
-
-def update_situation(situation, obs_dict):
-    def update_unit_count(situation_section, obs_section):
-        for unit_type in situation_section.keys():
-            for unit in obs_section.values():
-                if isinstance(unit, dict) and unit["type"] == unit_type:
-                    situation_section[unit_type] += 1
-
-    new_situation = {}
-    new_situation[utils.FIGHT_FOR] = {
-        unit_type: 0 for unit_type in situation[utils.FIGHT_FOR].keys()
-    }
-    new_situation[utils.ENEMY] = {
-        unit_type: 0 for unit_type in situation[utils.ENEMY].keys()
-    }
-
-    update_unit_count(new_situation[utils.FIGHT_FOR], obs_dict[utils.FIGHT_FOR])
-    update_unit_count(new_situation[utils.ENEMY], obs_dict[utils.ENEMY])
-
-    return new_situation, situation
-
-
-def update_tasks_by_situation(tasks: List[Tuple], situation, obs_dict):
-    new_situation, old_situation = update_situation(situation, obs_dict)
-
-    def process_tasks(tasks, situation_key, unit_index, task_types, changes_condition):
-        for unit_type in new_situation[situation_key].keys():
-            changes = max(changes_condition(unit_type), 0)
-            for task in tasks:
-                if (
-                    task[0] in task_types
-                    and task[1][unit_index] == unit_type
-                    and changes > 0
-                ):
-                    print(f"Completed task: {task[0]}{task[1]}")
-                    tasks.remove(task)
-                    changes -= 1
-                    if changes == 0:
-                        break
-
-    process_tasks(
-        tasks,
-        utils.FIGHT_FOR,
-        0,
-        [TASK_PRODUCE_UNIT, TASK_BUILD_BUILDING],
-        lambda unit_type: new_situation[utils.FIGHT_FOR][unit_type]
-        - old_situation[utils.FIGHT_FOR][unit_type],
+    env = PLARVecVideoRecorder(
+        env,
+        f"videos/llm_vs_llm/{args.blue}_vs_{args.red}",
+        record_video_trigger=lambda x: True,
+        video_length=args.video_length,
+        name_prefix=name_prefix,
     )
-
-    process_tasks(
-        tasks,
-        utils.ENEMY,
-        1,
-        [TASK_ATTACK_ENEMY],
-        lambda unit_type: old_situation[utils.ENEMY][unit_type]
-        - new_situation[utils.ENEMY][unit_type],
-    )
-
-    for task in tasks:
-        if task[0] == TASK_HARVEST_MINERAL:
-            is_unit_empty = not obs_dict["units"][task[1]]
-            is_unit_not_resource = obs_dict["units"][task[1]].get("type") != "resource"
-            is_base_zero = new_situation[utils.FIGHT_FOR]["base"] == 0
-
-            if is_unit_empty or is_unit_not_resource or is_base_zero:
-                tasks.remove(task)
-
-    return tasks, new_situation
+    return env
 
 
-def get_action_vectors(step, env, obs, situation, interval, tasks, llm_agent, fight_for):
-    obs_text, obs_dict = obs_2_text(obs[0])
+def init_logging(args):
+    """Initialize logging to a file."""
+    os.makedirs("logs/llm_vs_llm", exist_ok=True)
+    log_file = open(f"logs/llm_vs_llm/{args.blue}_vs_{args.red}.log", "w")
+    sys.stdout = log_file
+    return log_file
+
+
+def end_game(env, reward, args):
+    """Handle the end of the game."""
+    env.close()
+    if reward[0] > 0:
+        print(f"Game over! The winner is {args.blue}")
+    elif reward[0] < 0:
+        print(f"Game over! The winner is {args.red}")
+    else:
+        print("Game over! Draw!")
+
+
+def switch_fight_for(fight_for):
     if fight_for == "blue":
         utils.FIGHT_FOR = "blue"
         utils.ENEMY = "red"
@@ -135,12 +64,84 @@ def get_action_vectors(step, env, obs, situation, interval, tasks, llm_agent, fi
         utils.FIGHT_FOR = "red"
         utils.ENEMY = "blue"
 
-    if step % interval == 0:
-        response = llm_agent.run(obs_text)
-        tasks = parse_task(response)
-    tasks, situation = update_tasks_by_situation(tasks, situation, obs_dict)
-    action_vectors = script_mapping(env, tasks, obs_dict, True)
-    return action_vectors, tasks
+
+def main():
+    # ====================
+    #        Init
+    # ====================
+    args = load_args()
+    llm_agents = [
+        LLMAgent(args.blue, args.temperature, args.max_tokens),
+        LLMAgent(args.red, args.temperature, args.max_tokens),
+    ]
+    log_file = init_logging(args)
+    map_name = CHOSEN_MAPS[str(args.map_index)]
+    env = init_environment(args, map_name)
+
+    obs = env.reset()
+    switch_fight_for("blue")
+    blue_obs_text, obs_dict = obs_2_text(obs[0])
+    switch_fight_for("red")
+    red_obs_text, obs_dict = obs_2_text(obs[0])
+
+    situation = MAP_INFO[args.map_index]
+    metric = Metric(obs_dict)
+    old_obs = obs_dict
+
+    # ====================
+    #        Playing
+    # ====================
+    for i in range(args.max_steps):
+        print(f"{'-'*20} step-{i} {'-'*20}")
+
+        if i % args.tasks_update_interval == 0:
+            # blue_response = llm_agents[0].run(blue_obs_text)
+            switch_fight_for("blue")
+            blue_reponse = """START OF TASK
+            [Harvest Mineral](0, 0)
+            [Produce Unit]("worker", "south")
+            [Produce Unit]("worker", "east")
+            [Attack Enemy]("worker", "worker")
+            [Attack Enemy]("worker", "worker")
+            [Attack Enemy]("worker", "base")
+            """
+            switch_fight_for("red")
+            # red_response = llm_agents[1].run(red_obs_text)
+            red_response = """START OF TASK
+            [Harvest Mineral](7, 7)
+            [Produce Unit]("worker", "west")
+            [Produce Unit]("worker", "north")
+            [Attack Enemy]("worker", "worker")
+            [Attack Enemy]("worker", "worker")
+            [Attack Enemy]("worker", "base")
+            """
+
+            blue_tasks = parse_task(blue_reponse)
+            red_tasks = parse_task(red_response)
+
+        switch_fight_for("blue")
+        blue_tasks, situation = update_tasks(blue_tasks, situation, obs_dict)
+        blue_actions = script_mapping(env, blue_tasks, obs_dict)
+        
+        switch_fight_for("red")
+        red_tasks, situation = update_tasks(red_tasks, situation, obs_dict)
+        red_actions = script_mapping(env, red_tasks, obs_dict)
+
+        obs, reward, done, info = env.step(np.array([blue_actions, red_actions]))
+        switch_fight_for("blue")
+        blue_obs_text, obs_dict = obs_2_text(obs[0])
+        switch_fight_for("red")
+        red_obs_text, obs_dict = obs_2_text(obs[0])
+
+        metric.update(obs_dict, old_obs)
+        old_obs = obs_dict
+
+        if done[0]:
+            end_game(env, reward, args)
+            break
+
+    metric.display(obs_dict)
+    log_file.close()
 
 
 if __name__ == "__main__":

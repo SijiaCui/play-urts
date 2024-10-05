@@ -13,12 +13,11 @@
   - [x] 游戏规则
   - [x] 任务空间和参数要求
   - [ ] 示例
-    - [ ] 不同时期示例
-  - [ ] tips for win -> rule code
+    - [ ] 逆风局示例
 - [ ] Exp.
   - [ ] low-level: CoT/ReAct/LLM
   - [ ] high-level: CoT/ReAct/LLM
-    - [ ] Expert Rules!!!
+    - [ ] Expert Rules
   - [ ] Ours: CoT/ReAct/LLM
 
 
@@ -50,6 +49,7 @@ LLM/CoT/ReAct
 - [ ] 正在建造的 object 挡路
 - [x] units 都没有 ID，不知道谁是谁
 - [x] ！！！玩家资源 obs 一直是 0（环境问题）
+- [ ] 环境在游戏结束时自动 reset，导致无法的到最后一步的 obs，导致 metric 记录不准确
 
 # 1006
 ## SijiaCui

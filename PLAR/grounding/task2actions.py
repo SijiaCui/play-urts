@@ -82,6 +82,8 @@ def task_harvest_mineral(
         action_mask (np.ndarray): to indicate which actions are available, of shape [action types + params]
     """
     location = tuple(unit["location"])
+    if tgt_loc == base_loc == return_loc:
+        return noop(unit)
     if unit["resource_num"] == 0 and location != tgt_loc:
         return move_to_loc(unit, tgt_loc, path_planner, action_mask)
     if unit["resource_num"] == 0 and location == tgt_loc:

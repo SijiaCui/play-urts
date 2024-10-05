@@ -1,0 +1,62 @@
+INSTRUCTION: |
+  You are an RTS game expert tasked with planning a winning task plan in MicroRTS based on the provided scenario. {instruction}
+
+INTRODUCTION: |
+  
+  ## Game Manual
+  Here are the core rules and mechanics you need to follow: 
+  This is a 2-player grid-based game where all units occupy 1x1 tiles. Each player controls units and can create more by spending a single resource type, which acts as money.
+
+  Here is the game units description:
+  - Resource: A non-player unit that provides resources.
+  - Base: 10 HP, costs 10 resources, and takes 250 time units to build. Can produce Workers.
+  - Barracks: 4 HP, costs 5 resources, and takes 200 time units to build. Can produce Light, Heavy, or Ranged units.
+  - Worker: 1 HP, costs 1 resource, takes 50 time units to build. Can [Attack Enemy](1 damage), and harvest mineral.
+  - Light Unit: 4 HP, costs 2 resources, takes 80 time units to build. Can [Attack Enemy] (2 damage).
+  - Heavy Unit: 4 HP, costs 2 resources, takes 120 time units to build. Can [Attack Enemy] (4 damage).
+  - Ranged Unit: 1 HP, costs 2 resources, takes 100 time units to build. Can [Attack Enemy] from 3 distance (1 damage, range 3).
+
+  Note that when a unit is next to a base or barrack, it blocks the output they produce, so deploy type of unit near them somewhere else.
+
+  ## Task Space
+  Develop a winning task plan using allowed task space: 
+  You are only allowed to utilize the specified tasks to devise your strategy.  All tasks will only be assigned to one corresponding unit, so if you want multiple units to work together, please generate multiple repeated tasks.
+  Each task comprises a task name (enclosed in square brackets, e.g. "[Harvest Mineral]") and task parameters (enclosed in parentheses, e.g. "(0, 0)"). 
+  Your game plan should be a compilation of tasks, delineated by "START OF TASK" and "END OF TASK"
+
+  Here are the available tasks and their descriptions:
+  - [Harvest Mineral] (x, y): Assign one worker to harvest resources from the mineral field located at (x, y).
+  - [Produce Unit] (unit_type, direction): Produce a unit of the specified type ("worker", "light", "heavy", or "ranged") in the specified direction ("north", "east", "south", or "west").
+  - [Build Building] (building_type, (x, y)): Build a building of the specified type ("base", "barrack") at the specified location (x, y).
+  - [Deploy Unit] (unit_type, (x, y)): Deploy a unit of the specified type to the specified location (x, y).
+  - [Attack Enemy] (unit_type, ENEMY_type): Use a unit of a specified type ("worker", "light", "heavy", or "ranged") to attack an enemy unit of a specified type ("worker", "light", "heavy", "ranged", "base", or "barrack").
+
+  Please note that your plans will be executed in order, so the one listed first will be executed first. You should strictly follow the parameter format and avoid outputting extra parameters.
+  If you produce a unit type, be sure to assign a task to that unit type, otherwise they will block the entrance to the base or barracks, preventing the next unit from coming out.
+
+
+EXAMPLES: |
+  
+  ## Examples
+  You can refer to the following examples for guidance: 
+  {examples}
+
+TIPS: |
+  
+  ## Tips
+  Here are some useful tips for you to consider: 
+  {tips}
+
+OPPONENT: |
+  
+  ## Opponent Profile
+  Based on previous encounters, here is a summary of the opponent strategy and tactics: 
+  {opponent}
+
+START: |
+  
+  ## Battlefield Situation
+  Here is the description of the current battlefield: 
+  {observation}
+
+  You are now the {fight_for} side. Please make a task plan to win the game.

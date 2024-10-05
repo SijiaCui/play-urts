@@ -1,6 +1,8 @@
 import numpy as np
 from typing import Tuple
-import PLAR.utils.utils as utils
+import PLAR.utils as utils
+
+__all__ = ["get_json", "obs_2_text"]
 
 
 def get_json(obs: Tuple[np.ndarray, np.ndarray]) -> dict:
@@ -122,14 +124,12 @@ def get_player_text(player_data: dict, player: str) -> str:
         if isinstance(unit, dict):
             data[unit["type"]].append(unit)
 
-    text = f"{player.capitalize()}'s Units:\n"
+    text = f"{player.capitalize()}'s Resource: {player_data['resources']}\n"
+    text += f"{player.capitalize()}'s Units:\n"
     for unit_type, units in data.items():
         text += f"{unit_type}: {len(units)}\n"
         for unit in units:
-            if player == utils.FIGHT_FOR:
-                text += f"- {unit['location']}, task: {unit['task_type']}, action: {unit['action']}\n"
-            else:
-                text += f"- {unit['location']}, action: {unit['action']}\n"
+            text += f"- {unit['location']}, action: {unit['action']}\n"
     return text
 
 
