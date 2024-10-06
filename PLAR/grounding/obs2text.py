@@ -108,7 +108,7 @@ def get_env_text(env_data: dict) -> str:
     text += f"Available {CONST_MINERAL}: {len(resources)}\n"
     for resource in resources:
         text += f"- {CONST_MINERAL}{resource['location']} resource: {resource['resource_num']}\n"
-    text += f"You are in the {utils.FIGHT_FOR} side.\n"
+    text += f"You are in the **{utils.FIGHT_FOR}** side.\n"
     return text
 
 

@@ -17,7 +17,7 @@ texts/
 main.log
 data.json
 
-/.vscode/
-/.env
-/*.log
-runs/
+.vscode/
+.env
+*.log
+runs*/

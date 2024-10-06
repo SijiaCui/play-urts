@@ -11,18 +11,24 @@ INTRODUCTION: |
   - Resource: A non-player unit that provides resources.
   - Base: 10 HP, costs 10 resources, and takes 250 time units to build. Can produce Workers.
   - Barracks: 4 HP, costs 5 resources, and takes 200 time units to build. Can produce Light, Heavy, or Ranged units.
-  - Worker: 1 HP, costs 1 resource, takes 50 time units to build. Can [Attack Enemy](1 damage), and harvest mineral.
+  - Worker: 1 HP, costs 1 resource, takes 50 time units to build. Can [Attack Enemy](1 damage), and harvest mineral. Workers are very useful. Please make more and use them to attack enemy workers.
   - Light Unit: 4 HP, costs 2 resources, takes 80 time units to build. Can [Attack Enemy] (2 damage).
   - Heavy Unit: 4 HP, costs 2 resources, takes 120 time units to build. Can [Attack Enemy] (4 damage).
-  - Ranged Unit: 1 HP, costs 2 resources, takes 100 time units to build. Can [Attack Enemy] from 3 distance (1 damage, range 3).
+  - Ranged Unit: 1 HP, costs 2 resources, takes 100 time units to build. Can [Attack Enemy] from 3 distance (1 damage, range 3). Ranged units may be the key to your victory. Experts like to use them.
 
-  Note that when a unit is next to a base or barrack, it blocks the output they produce, so deploy type of unit near them somewhere else.
+  The prerequisite for manufacturing light, heavy and long-range weapons is to have a barracks.
+  Note that when a unit is next to a base or barrack, it blocks the output they produce, so please spreading out where the units are deployed.
 
   ## Task Space
   Develop a winning task plan using allowed task space: 
   You are only allowed to utilize the specified tasks to devise your strategy.  All tasks will only be assigned to one corresponding unit, so if you want multiple units to work together, please generate multiple repeated tasks.
   Each task comprises a task name (enclosed in square brackets, e.g. "[Harvest Mineral]") and task parameters (enclosed in parentheses, e.g. "(0, 0)"). 
-  Your game plan should be a compilation of tasks, delineated by "START OF TASK" and "END OF TASK"
+  Your game plan should be a list of tasks, with "START OF TASK" and "END OF TASK" marking the beginning and end of the list, for example:
+  START OF TASK
+  [Harvest Mineral] (0, 0)
+  [Produce Unit] (worker, 0)
+  ...
+  END OF TASK
 
   Here are the available tasks and their descriptions:
   - [Harvest Mineral] (x, y): Assign one worker to harvest resources from the mineral field located at (x, y).
@@ -33,6 +39,7 @@ INTRODUCTION: |
 
   Please note that your plans will be executed in order, so the one listed first will be executed first. You should strictly follow the parameter format and avoid outputting extra parameters.
   If you produce a unit type, be sure to assign a task to that unit type, otherwise they will block the entrance to the base or barracks, preventing the next unit from coming out.
+  Please pay attention to the actual location of your current base. If you need to harvest resources, please go to the nearest mine location. It is not recommended to build a barracks too early, because it takes a long time and a lot of resources, and we cannot guarantee whether it is safe during this period.
 
 
 EXAMPLES: |
@@ -56,7 +63,8 @@ OPPONENT: |
 START: |
   
   ## Battlefield Situation
-  Here is the description of the current battlefield: 
+  Here is the description of the **current situation**: 
   {observation}
 
-  You are now the {fight_for} side. Please make a task plan to win the game.
+  If you have zero resources and there are no mineral fields on the map, you need to let all your units attack the enemy's units and buildings to launch the final decisive battle.
+  You are now the **{fight_for}** side. Please make a task plan to win the game based on current situation.

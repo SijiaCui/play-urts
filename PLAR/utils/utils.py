@@ -69,13 +69,13 @@ def load_args():
     parser.add_argument("--red", type=str, default=config["red"])
     parser.add_argument("--temperature", type=float, default=float(config["llm_engine_temperature"]))
     parser.add_argument("--max_tokens", type=int, default=int(config["llm_engine_max_tokens"]))
-    parser.add_argument("--blue_prompt", type=list, default=config["blue_prompt"])
-    parser.add_argument("--red_prompt", type=list, default=config["red_prompt"])
+    parser.add_argument("--blue_prompt", nargs='+', type=str, default=config["blue_prompt"])
+    parser.add_argument("--red_prompt", nargs='+', type=str, default=config["red_prompt"])
 
     # video recorder parameters
+    parser.add_argument("--video_record", action="store_true")
     parser.add_argument("--video_fps", type=int, default=int(config["video_fps"]))
     parser.add_argument("--video_length", type=int, default=int(config["video_length"]))
-    parser.add_argument("--capture_video", action="store_true")
 
     # other parameters
     parser.add_argument("--debug", action="store_true")
@@ -217,6 +217,7 @@ class path_planning:
 
 def parse_task(text: str) -> list:
     import ast
+    import re
     from PLAR.grounding import TASK_SPACE
 
     task_list = []
@@ -234,8 +235,10 @@ def parse_task(text: str) -> list:
             and task_with_params[task_beg : task_end + 1] in TASK_SPACE
         ):
             task = task_with_params[task_beg : task_end + 1]
+        params = re.sub(r'(?<!\')(\b[a-zA-Z_]+\b)(?!\')', r"'\1'", task_with_params[param_beg : param_end + 1])
+        params = re.sub(r"'(\d+)'", r"\1", params)
         if param_beg + 1 and param_end + 1:
-            params = ast.literal_eval(task_with_params[param_beg : param_end + 1])
+            params = ast.literal_eval(params)
             task, params = params_valid(task, params)
             if task is not None:
                 task_list.append(task)
@@ -244,6 +247,10 @@ def parse_task(text: str) -> list:
     for task, params in zip(task_list, params_list):
         print(task, params)
     return list(zip(task_list, params_list))
+
+
+def parse_tips(text: str) -> str:
+    return text.split("START OF TIPS")[1].split("END OF TIPS")[0]
 
 
 def params_valid(task, params):
@@ -316,7 +323,7 @@ def update_situation(situation, obs_dict):
 
 def update_tasks(tasks: List[Tuple], situation, obs_dict):
     import PLAR.utils as utils
-    from PLAR.grounding import TASK_HARVEST_MINERAL, TASK_BUILD_BUILDING, TASK_PRODUCE_UNIT, TASK_ATTACK_ENEMY
+    from PLAR.grounding import TASK_BUILD_BUILDING, TASK_PRODUCE_UNIT, TASK_ATTACK_ENEMY
 
     new_situation, old_situation = update_situation(situation, obs_dict)
 
@@ -336,14 +343,33 @@ def update_tasks(tasks: List[Tuple], situation, obs_dict):
 
     process_tasks(tasks, utils.ENEMY, 1, [TASK_ATTACK_ENEMY],
         lambda unit_type: old_situation[utils.ENEMY][unit_type] - new_situation[utils.ENEMY][unit_type])
+    tasks = can_we_harvest(tasks, obs_dict, situation)
+    return tasks, new_situation
+
+def can_we_harvest(tasks, obs_dict, situation):
+    import PLAR.utils as utils
+    from PLAR.grounding import TASK_HARVEST_MINERAL
+
+    num_worker_with_resource = 0
+    for unit in obs_dict[utils.FIGHT_FOR].values():
+        if isinstance(unit, dict) and unit["type"] == "worker":
+            if unit["resource_num"] > 0:
+                num_worker_with_resource += 1
 
     for task in tasks:
         if task[0] == TASK_HARVEST_MINERAL:
-            is_unit_empty = not obs_dict["units"][task[1]]
-            is_unit_not_resource = obs_dict["units"][task[1]].get("type") != "resource"
-            is_base_zero = new_situation[utils.FIGHT_FOR]["base"] == 0
+            is_exist_mine = obs_dict["units"][task[1]] and obs_dict["units"][task[1]]["type"] == "resource"
+            is_exist_base = situation[utils.FIGHT_FOR]["base"] > 0
 
-            if is_unit_empty or is_unit_not_resource or is_base_zero:
+            if is_exist_base and (num_worker_with_resource > 0 or is_exist_mine):
+                num_worker_with_resource -= 1
+            else:
                 tasks.remove(task)
+    return tasks
 
-    return tasks, new_situation
+if __name__ == '__main__':
+    aa=0
+    if aa:
+        print("aa")
+    else:
+        print("bb")

@@ -49,7 +49,7 @@ LLM/CoT/ReAct
 - [ ] 正在建造的 object 挡路
 - [x] units 都没有 ID，不知道谁是谁
 - [x] ！！！玩家资源 obs 一直是 0（环境问题）
-- [ ] 环境在游戏结束时自动 reset，导致无法的到最后一步的 obs，导致 metric 记录不准确
+- [x] 环境在游戏结束时自动 reset，导致无法的到最后一步的 obs，导致 metric 记录不准确
 
 # 1009
 ## SijiaCui

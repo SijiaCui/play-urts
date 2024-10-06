@@ -4,7 +4,8 @@ from langchain_openai import AzureChatOpenAI
 
 from langchain_core.messages import HumanMessage
 
-from PLAR.llm_agents.prompts import zero_shot_prompt, few_shot_prompt, prompt_w_tips, prompt_w_opponent
+from PLAR.llm_agents.prompts import zero_shot_prompt, few_shot_prompt, prompt_w_tips, prompt_w_opponent, reflect_prompt
+from PLAR.utils.utils import parse_tips
 import PLAR.utils as utils
 
 class LLMAgent:
@@ -27,7 +28,7 @@ class LLMAgent:
 
     def _agent_prompt(self) -> str:
         if self.prompt_config[1] == "zero_shot_prompt":
-            with open(f"PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
+            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
                 instruction = f.read()
             self.prompt = zero_shot_prompt
             kwargs = {
@@ -36,14 +37,10 @@ class LLMAgent:
                 "fight_for": utils.FIGHT_FOR,
             }
         elif self.prompt_config[1] == "few_shot_prompt":
-            with open(f"PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
+            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
                 instruction = f.read()
-            with open(f"PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
-                few_shot = yaml.safe_load(f)
-            if utils.FIGHT_FOR == "blue":
-                examples = few_shot["BLUE_EXAMPLES"]
-            elif utils.FIGHT_FOR == "red":
-                examples = few_shot["RED_EXAMPLES"]
+            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
+                examples = yaml.safe_load(f)["EXAMPLES"]
             self.prompt = few_shot_prompt
             kwargs = {
                 "instruction": instruction,
@@ -55,12 +52,8 @@ class LLMAgent:
             with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
                 instruction = f.read()
             with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
-                few_shot = yaml.safe_load(f)
-            if utils.FIGHT_FOR == "blue":
-                examples = few_shot["BLUE_EXAMPLES"]
-            elif utils.FIGHT_FOR == "red":
-                examples = few_shot["RED_EXAMPLES"]
-            tips = few_shot["TIPS"]
+                examples = yaml.safe_load(f)["EXAMPLES"]
+            tips = parse_tips(self.reflect())
             self.prompt = prompt_w_tips
             kwargs = {
                 "instruction": instruction,
@@ -73,11 +66,7 @@ class LLMAgent:
             with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
                 instruction = f.read()
             with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
-                few_shot = yaml.safe_load(f)
-            if utils.FIGHT_FOR == "blue":
-                examples = few_shot["BLUE_EXAMPLES"]
-            elif utils.FIGHT_FOR == "red":
-                examples = few_shot["RED_EXAMPLES"]
+                examples = yaml.safe_load(f)["EXAMPLES"]
             self.prompt = prompt_w_opponent
             kwargs = {
                 "instruction": instruction,
@@ -95,11 +84,26 @@ class LLMAgent:
             response = self.llm(prompt=prompt_content)
         except Exception as e:
             response = f"LLM response error: {e}"
+        print(prompt_content)
+        print(response)
         return response
 
-    def run(self, obs, opponent=None) -> str:
+    def reflect(self):
+        with open(f"/root/desc/play-urts/PLAR/configs/templates/reflection/{self.map_name}_few_shot.yaml") as f:
+            examples = yaml.safe_load(f)["EXAMPLES"]
+        prompt_content = reflect_prompt.format(
+            examples=examples,
+            observation=self.obs,
+            fight_for=utils.FIGHT_FOR
+        )
+        try:
+            response = self.llm(prompt=prompt_content)
+        except Exception as e:
+            response = f"LLM response error: {e}"
+        return response
+
+    def run(self, obs) -> str:
         self.obs = obs
-        self.opponent = opponent
         self.response = self._agent_response()
         return self.response
 

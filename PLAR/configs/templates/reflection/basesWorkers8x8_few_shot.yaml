@@ -1,0 +1,96 @@
+EXAMPLES: |
+  The Situation: 
+  The Game map is a 8x8 grid.
+  Available Mineral Fields: 2
+  - Mineral Fields(0, 0) resource: 16
+  - Mineral Fields(7, 7) resource: 17
+  You are in the **blue** side.
+
+  Red's Resource: 6
+  Red's Units:
+  base: 1
+  - (6, 5), action: produce
+  barrack: 0
+  worker: 5
+  - (2, 5), action: noop
+  - (5, 2), action: noop
+  - (5, 5), action: noop
+  - (7, 2), action: noop
+  - (7, 3), action: noop
+  light: 0
+  heavy: 0
+  ranged: 0
+
+  Blue's Resource: 5
+  Blue's Units:
+  base: 1
+  - (1, 2), action: produce
+  barrack: 0
+  worker: 6
+  - (0, 1), action: noop
+  - (1, 0), action: noop
+  - (1, 3), action: noop
+  - (1, 4), action: noop
+  - (2, 1), action: noop
+  - (2, 2), action: noop
+  light: 0
+  heavy: 0
+  ranged: 0
+
+  Planning Suggestion:
+  START OF TIPS
+  Although we have one more worker than the red team, they have more resources than us, so we are now in a balance.
+  We can look for opportunities and take the initiative from the following aspects:
+
+  - Two workers go to harvest resources and catch up with the enemy's economic development
+  - Workers offer a better cost-effectiveness, so produce them in large quantities
+  - Offense is the best defense. Workers can also attack enemies. Try to let the worker attack more often
+  - The enemy will probably continue to create worker invasions in the next period of time, so we need a large number of [attack enemies] (workers, workers), and it is not recommended to build barracks.
+  END OF TIPS
+
+  The Situation: 
+  The Game map is a 8x8 grid.
+  Available Mineral Fields: 2
+  - Mineral Fields(0, 0) resource: 10
+  - Mineral Fields(7, 7) resource: 9
+  You are in the **red** side.
+
+  Red's Resource: 5
+  Red's Units:
+  base: 1
+  - (6, 5), action: noop
+  barrack: 0
+  worker: 4
+  - (2, 2), action: noop
+  - (4, 4), action: noop
+  - (5, 5), action: noop
+  - (7, 5), action: noop
+  light: 0
+  heavy: 0
+  ranged: 0
+  
+  Blue's Resource: 6
+  Blue's Units:
+  base: 1
+  - (1, 2), action: noop
+  barrack: 1
+  - (0, 4) action: produce
+  worker: 4
+  - (0, 1), action: harvest
+  - (0, 3), action: noop
+  - (1, 1), action: noop
+  - (1, 3), action: noop
+  light: 0
+  heavy: 0
+  ranged: 0
+
+  Planning Suggestion:
+  START TIPS
+  The enemy now has one more barracks than us and is producing soldiers, so we are at a disadvantage now.
+  We can defend safely and stabilize the situation from the following aspects:
+
+  - Plan to have two workers harvest resources, because one mine has two workers for the highest efficiency
+  - Workers offer a better cost-effectiveness, so produce them in large quantities
+  - Offense is the best defense. Workers can also attack enemies. Try to let the worker attack more often
+  - The enemy will probably continue to create worker invasions in the next period of time, so we need a large number of [attack enemies] (workers, workers), and it is not recommended to build barracks.
+  END OF TIPS

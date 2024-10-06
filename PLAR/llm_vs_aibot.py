@@ -3,13 +3,16 @@ import os
 import yaml
 import numpy as np
 from PLAR.grounding import obs_2_text, script_mapping
-from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks
+from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks, update_situation, can_we_harvest
 from PLAR.llm_agents import LLMAgent
 from PLAR.utils.map_info import MAP_INFO
 from PLAR.utils.metric import Metric
 from gym_microrts import microrts_ai
 from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
 from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
+import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 AI_MAPPING = {
     "randomBiasedAI": microrts_ai.randomBiasedAI,
@@ -26,6 +29,7 @@ AI_MAPPING = {
 #        Utils
 # ====================
 def get_run_log_dir(args, map_path):
+    """Get the directory to save the run logs."""
     run_dir = "runs/"
     run_dir += f"{args.blue_prompt[0]}-{args.blue}_vs_{args.red}/"
     run_dir += map_path.split("maps/")[-1].split(".xml")[0].replace("/", "-")
@@ -51,13 +55,14 @@ def init_environment(args, map_path, run_dir):
         reward_weight=np.array([10, 0, 0, 0, 0, 0]),
         autobuild=False,
     )
-    env.metadata["video.frames_per_second"] = args.video_fps
-    env = PLARVecVideoRecorder(
-        env,
-        run_dir,
-        record_video_trigger=lambda x: True,
-        video_length=args.video_length,
-    )
+    if args.video_record:
+        env.metadata["video.frames_per_second"] = args.video_fps
+        env = PLARVecVideoRecorder(
+            env,
+            run_dir,
+            record_video_trigger=lambda x: True,
+            video_length=args.video_length,
+        )
     return env
 
 
@@ -73,11 +78,11 @@ def end_game(env, reward, args, end_step):
     env.close()
     print("\n")
     if reward[0] > 0:
-        print(f"Game over at {end_step} step! The winner is {args.blue}")
+        print(f"Game over at {end_step} step! The winner is {args.blue} with {args.blue_prompt[0]}-{args.blue_prompt[1]}")
     elif reward[0] < 0:
         print(f"Game over at {end_step} step! The winner is {args.red}")
     else:
-        print(f"Game over at {end_step} step! Draw!")
+        print(f"Game over at {end_step} step! Draw! Between {args.blue} with {args.blue_prompt[0]}-{args.blue_prompt[1]} and {args.red}")
 
 
 def main():
@@ -107,8 +112,10 @@ def main():
         if i % args.tasks_update_interval == 0:
             response = llm_agent.run(obs_text)
             tasks = parse_task(response)
-
-        tasks, situation = update_tasks(tasks, situation, obs_dict)
+            situation, _ = update_situation(situation, obs_dict)
+            tasks = can_we_harvest(tasks, obs_dict, situation)
+        else:
+            tasks, situation = update_tasks(tasks, situation, obs_dict)
         action_vectors = script_mapping(env, tasks, obs_dict)
 
         obs, reward, done, info = env.step(action_vectors)

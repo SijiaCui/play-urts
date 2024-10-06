@@ -1,5 +1,4 @@
 import numpy as np
-
 from typing import List, Dict, Union, Tuple
 
 __all__ = ["script_mapping"]
@@ -102,7 +101,10 @@ def assign_task_harvest_mineral(
     min_path_len = 1e9
     for unit in exist_units.values():
         if unit["task_type"] == "[noop]" and unit["type"] == "worker":
-            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params)
+            if unit["resource_num"] > 0:
+                path_len = 0
+            else:
+                path_len, _ = path_planner.get_shortest_path(unit["location"], task_params)
             if path_len < min_path_len:
                 closest_unit_id = unit["id"]
                 min_path_len = path_len
