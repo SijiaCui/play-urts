@@ -1,7 +1,7 @@
 max_steps: 2000
 tasks_update_interval: 100
 blue: Qwen2-72B-Instruct
-red: workerRushAI
+red: Qwen2-72B-Instruct
 llm_engine_temperature: 0
 llm_engine_max_tokens: 1024
 blue_prompt:
@@ -9,7 +9,7 @@ blue_prompt:
   - few_shot_prompt
 red_prompt:
   - vanilla
-  - prompt_w_tips
+  - zero_shot_prompt
 video_fps: 10
 video_length: 2000
 map_index: 3

@@ -36,14 +36,11 @@ REFLECT_TEMPLATE: |
 
   Unless you can guarantee that we are safe enough for the next 200 time steps and the enemy will not create workers to invade, do not recommend building a barracks.
   
-  ## Examples
-  It is highly recommended that you refer to the following examples as they are very useful: 
-  {examples}
-  
   ## Battlefield Situation
   Here is the description of the current battlefield: 
   {observation}
 
   Please pay attention to the number of resources you have in the current situation, which determines whether you can create units or build buildings. If there are no resources to use and no mineral filed to harvest, think about how to use the existing units to attack the enemy.
-  You are now the **{fight_for}** side. Please provide macro-level strategy suggestions for the next step of planning.
-  
+  You are now the **{fight_for}** side. Please select the three most valuable suggestions from the following list based on the current situation:
+
+  {examples}

@@ -305,6 +305,28 @@ def params_valid(task, params):
 def update_situation(situation, obs_dict):
     import PLAR.utils as utils
 
+    init_situation = {
+        "blue": {
+            "worker": 0,
+            "base": 0,
+            "barrack": 0,
+            "light": 0,
+            "heavy": 0,
+            "ranged": 0,
+        },
+        "red": {
+            "worker": 0,
+            "base": 0,
+            "barrack": 0,
+            "light": 0,
+            "heavy": 0,
+            "ranged": 0,
+        },
+    }
+
+    if situation is None:
+        situation = init_situation
+
     def update_unit_count(situation_section, obs_section):
         for unit_type in situation_section.keys():
             for unit in obs_section.values():

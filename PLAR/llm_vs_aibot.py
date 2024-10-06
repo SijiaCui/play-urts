@@ -5,7 +5,6 @@ import numpy as np
 from PLAR.grounding import obs_2_text, script_mapping
 from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks, update_situation, can_we_harvest
 from PLAR.llm_agents import LLMAgent
-from PLAR.utils.map_info import MAP_INFO
 from PLAR.utils.metric import Metric
 from gym_microrts import microrts_ai
 from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
@@ -99,7 +98,7 @@ def main():
 
     obs = env.reset()
     obs_text, obs_dict = obs_2_text(obs[0])
-    situation = MAP_INFO[args.map_index]
+    situation = None
     old_obs = obs_dict
     metric = Metric(obs_dict)
 

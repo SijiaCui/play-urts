@@ -4,9 +4,8 @@ import yaml
 import numpy as np
 import PLAR.utils as utils
 from PLAR.grounding import obs_2_text, script_mapping
-from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks, can_we_harvest
+from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks, can_we_harvest, update_situation
 from PLAR.llm_agents import LLMAgent
-from PLAR.utils.map_info import MAP_INFO
 from PLAR.utils.metric import Metric
 from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
 from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
@@ -43,13 +42,14 @@ def init_environment(args, map_path, run_dir):
         reward_weight=np.array([10, 0, 0, 0, 0, 0]),
         autobuild=False,
     )
-    env.metadata["video.frames_per_second"] = args.video_fps
-    env = PLARVecVideoRecorder(
-        env,
-        run_dir,
-        record_video_trigger=lambda x: True,
-        video_length=args.video_length,
-    )
+    if args.video_record:
+        env.metadata["video.frames_per_second"] = args.video_fps
+        env = PLARVecVideoRecorder(
+            env,
+            run_dir,
+            record_video_trigger=lambda x: True,
+            video_length=args.video_length,
+        )
     return env
 
 
@@ -65,9 +65,9 @@ def end_game(env, reward, args, end_step):
     env.close()
     print("\n")
     if reward[0] > 0:
-        print(f"Game over at {end_step} step! The winner is {args.blue} with {args.blue_prompt[0]}-{args.blue_prompt[1]}")
+        print(f"Game over at {end_step} step! The winner is blue side: {args.blue} with {args.blue_prompt[0]}-{args.blue_prompt[1]}")
     elif reward[0] < 0:
-        print(f"Game over at {end_step} step! The winner is {args.red} with {args.red_prompt[0]}-{args.red_prompt[1]}")
+        print(f"Game over at {end_step} step! The winner is red side: {args.red} with {args.red_prompt[0]}-{args.red_prompt[1]}")
     else:
         print(f"Game over at {end_step} step! Draw! Between {args.blue} with {args.blue_prompt[0]}-{args.blue_prompt[1]} and {args.red} with {args.red_prompt[0]}-{args.red_prompt[1]}")
 
@@ -88,22 +88,30 @@ def main():
     map_path = CHOSEN_MAPS[str(args.map_index)]
     run_dir = get_run_log_dir(args, map_path)
     map_name = map_path.split("/")[-1].split(".xml")[0]
-    llm_agents = [
-        LLMAgent(args.blue, args.temperature, args.max_tokens, map_name, args.blue_prompt),
-        LLMAgent(args.red, args.temperature, args.max_tokens, map_name, args.red_prompt)
-    ]
+    llm_agents = {
+        "blue": LLMAgent(args.blue, args.temperature, args.max_tokens, map_name, args.blue_prompt),
+        "red": LLMAgent(args.red, args.temperature, args.max_tokens, map_name, args.red_prompt)
+    }
     log_file = init_logging(run_dir)
     env = init_environment(args, map_path, run_dir)
 
     obs = env.reset()
-    switch_fight_for("blue")
-    blue_obs_text, obs_dict = obs_2_text(obs[0])
-    switch_fight_for("red")
-    red_obs_text, obs_dict = obs_2_text(obs[0])
+    obs_text = {}
+    obs_dict = {}
+    situation = None
+    tasks = {}
 
-    situation = MAP_INFO[args.map_index]
-    metric = Metric(obs_dict)
-    old_obs = obs_dict
+    obs = env.reset()
+    sides = ["blue", "red"]
+
+    for side in sides:
+        switch_fight_for(side)
+        obs_text[side], obs_dict[side] = obs_2_text(obs[0])
+        tasks[side] = []
+
+    situation = None
+    metric = Metric(obs_dict["blue"])
+    old_obs = obs_dict["blue"]
 
     # ====================
     #        Playing
@@ -112,36 +120,37 @@ def main():
         print(f"{'-'*20} step-{i} {'-'*20}")
 
         if i % args.tasks_update_interval == 0:
-            switch_fight_for("blue")
-            blue_response = llm_agents[0].run(blue_obs_text)
-            switch_fight_for("red")
-            red_response = llm_agents[1].run(red_obs_text)
+            for side in sides:
+                switch_fight_for(side)
+                situation, _ = update_situation(situation, obs_dict[side])
+                response = llm_agents[side].run(obs_text[side])
+                tasks[side] = parse_task(response)
+                tasks[side] = can_we_harvest(tasks[side], obs_dict[side], situation)
+        else:
+            for side in sides:
+                switch_fight_for(side)
+                tasks[side], situation = update_tasks(tasks[side], situation, obs_dict[side])
 
-            blue_tasks = parse_task(blue_response)
-            red_tasks = parse_task(red_response)
+        actions = []
+        for side in sides:
+            switch_fight_for(side)
+            action = script_mapping(env, tasks[side], obs_dict[side])
+            actions.append(action)
 
-        switch_fight_for("blue")
-        blue_tasks, situation = update_tasks(blue_tasks, situation, obs_dict)
-        blue_actions = script_mapping(env, blue_tasks, obs_dict)
+        obs, reward, done, info = env.step(np.array(actions))
+        for side in sides:
+            switch_fight_for(side)
+            obs_text[side], obs_dict[side] = obs_2_text(obs[0])
 
-        switch_fight_for("red")
-        red_tasks, situation = update_tasks(red_tasks, situation, obs_dict)
-        red_actions = script_mapping(env, red_tasks, obs_dict)
-
-        obs, reward, done, info = env.step(np.array([blue_actions, red_actions]))
-        switch_fight_for("blue")
-        blue_obs_text, obs_dict = obs_2_text(obs[0])
-        switch_fight_for("red")
-        red_obs_text, obs_dict = obs_2_text(obs[0])
-
-        metric.update(obs_dict, old_obs)
-        old_obs = obs_dict
+        # Because it is perfect information, the metric already includes both sides
+        metric.update(obs_dict["blue"], old_obs)
+        old_obs = obs_dict["blue"]
 
         if done[0]:
             end_game(env, reward, args, i)
             break
 
-    metric.display(obs_dict)
+    metric.display(obs_dict["blue"])
     log_file.close()
 
 
