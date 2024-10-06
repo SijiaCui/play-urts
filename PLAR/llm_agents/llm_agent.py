@@ -27,9 +27,11 @@ class LLMAgent:
         return response
 
     def _agent_prompt(self) -> str:
+        with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
+            instruction = f.read()
+        with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
+            examples = yaml.safe_load(f)["EXAMPLES"]
         if self.prompt_config[1] == "zero_shot_prompt":
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
-                instruction = f.read()
             self.prompt = zero_shot_prompt
             kwargs = {
                 "instruction": instruction,
@@ -37,10 +39,6 @@ class LLMAgent:
                 "fight_for": utils.FIGHT_FOR,
             }
         elif self.prompt_config[1] == "few_shot_prompt":
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
-                instruction = f.read()
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
-                examples = yaml.safe_load(f)["EXAMPLES"]
             self.prompt = few_shot_prompt
             kwargs = {
                 "instruction": instruction,
@@ -49,10 +47,6 @@ class LLMAgent:
                 "fight_for": utils.FIGHT_FOR,
             }
         elif self.prompt_config[1] == "prompt_w_tips":
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
-                instruction = f.read()
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
-                examples = yaml.safe_load(f)["EXAMPLES"]
             tips = parse_tips(self.reflect())
             self.prompt = prompt_w_tips
             kwargs = {
@@ -62,20 +56,17 @@ class LLMAgent:
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-        elif self.prompt_config[1] == "prompt_w_opponent":
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
-                instruction = f.read()
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
-                examples = yaml.safe_load(f)["EXAMPLES"]
-            self.prompt = prompt_w_opponent
+        elif self.prompt_config[1] == "prompt_w_expert_tips":
+            with open(f"/root/desc/play-urts/PLAR/configs/templates/reflection/{self.map_name}_few_shot.yaml") as f:
+                tips = yaml.safe_load(f)["EXAMPLES"]
+            self.prompt = prompt_w_tips
             kwargs = {
                 "instruction": instruction,
                 "examples": examples,
-                "opponent": self.opponent,
+                "tips": tips,
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-
         return self.prompt.format(**kwargs)
 
     def _agent_response(self) -> str:

@@ -169,8 +169,13 @@ public class JNIGridnetPLARVecClient {
         for (int i = 0; i < botClients.length; i++) {
             botClients[i] = new JNIBotPLARClient(a_rfs, a_micrortsPath, mapPaths[i], a_ai1s[i], a_ai2s[i], a_utt, partialObs);
         }
+        PLARResponse r = new JNIGridnetPLARClient(a_rfs, a_micrortsPath, mapPaths[0], new PassiveAI(a_utt), a_utt, partialObs).reset(0);
+        int s2 = r.observation.length; 
+        int s3 = r.observation[0].length;
+        int s4 = r.observation[0][0].length;
         responses = new PLARResponses(null, null, null, null);
         rs = new PLARResponse[a_ai2s.length];
+        observation = new int[a_ai2s.length][s2][s3][s4];
         reward = new double[a_ai2s.length][rfs.length];
         done = new boolean[a_ai2s.length][rfs.length];
         resources = new int[a_ai2s.length][rfs.length];
@@ -185,12 +190,12 @@ public class JNIGridnetPLARVecClient {
                 rs[i] = botClients[i].reset(players[i]);
             }
             for (int i = 0; i < rs.length; i++) {
-                // observation[i] = rs[i].observation;
+                observation[i] = rs[i].observation;
                 reward[i] = rs[i].reward;
                 done[i] = rs[i].done;
                 resources[i] = rs[i].resources;
             }
-            responses.set(null, reward, done, resources);
+            responses.set(observation, reward, done, resources);
             return responses;
         }
         
@@ -221,25 +226,17 @@ public class JNIGridnetPLARVecClient {
                 rs[i] = botClients[i].gameStep(players[i]);
                 envSteps[i] += 1;
                 if (rs[i].done[0] || envSteps[i] >= maxSteps) {
-                    for (int j = 0; j < terminalReward1.length; j++) {
-                        terminalReward1[j] = rs[i].reward[j];
-                        terminalDone1[j] = rs[i].done[j];
-                    }
-                    for (int j = 0; j < terminalReward1.length; j++) {
-                        rs[i].reward[j] = terminalReward1[j];
-                        rs[i].done[j] = terminalDone1[j];
-                    }
                     rs[i].done[0] = true;
                     envSteps[i] =0;
                 }
             }
             for (int i = 0; i < rs.length; i++) {
-                // observation[i] = rs[i].observation;
+                observation[i] = rs[i].observation;
                 reward[i] = rs[i].reward;
                 done[i] = rs[i].done;
                 resources[i] = rs[i].resources;
             }
-            responses.set(null, reward, done, resources);
+            responses.set(observation, reward, done, resources);
             return responses;
         }
         

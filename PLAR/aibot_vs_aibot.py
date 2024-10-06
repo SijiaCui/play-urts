@@ -2,12 +2,11 @@ import sys
 import os
 import yaml
 import numpy as np
-from PLAR.grounding import obs_2_text, script_mapping
-from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks, update_situation, can_we_harvest
-from PLAR.llm_agents import LLMAgent
+from PLAR.utils.utils import load_args, CHOSEN_MAPS
+from PLAR.grounding import obs_2_text
 from PLAR.utils.metric import Metric
 from gym_microrts import microrts_ai
-from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
+from gym_microrts.envs.plar_vec_env import MicroRTSBotPLARVecEnv
 from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
 import warnings
 
@@ -45,11 +44,10 @@ def get_run_log_dir(args, map_path):
 
 def init_environment(args, map_path, run_dir):
     """Initialize the environment and video recorder."""
-    env = MicroRTSGridModePLARVecEnv(
-        num_selfplay_envs=0,
-        num_bot_envs=1,
-        max_steps=args.max_steps,
+    env = MicroRTSBotPLARVecEnv(
+        ai1s=[AI_MAPPING[args.blue]],
         ai2s=[AI_MAPPING[args.red]],
+        max_steps=args.max_steps,
         map_paths=[map_path],
         reward_weight=np.array([10, 0, 0, 0, 0, 0]),
         autobuild=False,
@@ -77,11 +75,11 @@ def end_game(env, reward, args, end_step):
     env.close()
     print("\n")
     if reward[0] > 0:
-        print(f"Game over at {end_step} step! The winner is {args.blue} with {args.blue_prompt[1]}")
+        print(f"Game over at {end_step} step! The winner is {args.blue}")
     elif reward[0] < 0:
         print(f"Game over at {end_step} step! The winner is {args.red}")
     else:
-        print(f"Game over at {end_step} step! Draw! Between {args.blue} with {args.blue_prompt[1]} and {args.red}")
+        print(f"Game over at {end_step} step! Draw! Between {args.blue} and {args.red}")
 
 
 def main():
@@ -91,14 +89,11 @@ def main():
     args = load_args()
     map_path = CHOSEN_MAPS[args.map_index]
     run_dir = get_run_log_dir(args, map_path)
-    map_name = map_path.split("/")[-1].split(".xml")[0]
-    llm_agent = LLMAgent(args.blue, args.temperature, args.max_tokens, map_name, args.blue_prompt)
     env = init_environment(args, map_path, run_dir)
     log_file = init_logging(run_dir)
 
     obs = env.reset()
     obs_text, obs_dict = obs_2_text(obs[0])
-    situation = None
     old_obs = obs_dict
     metric = Metric(obs_dict)
 
@@ -106,18 +101,9 @@ def main():
     #        Gaming
     # ====================
     for i in range(args.max_steps):
-        print(f"{'-'*20} step-{i} {'-'*20}")
-
-        if i % args.tasks_update_interval == 0:
-            response = llm_agent.run(obs_text)
-            tasks = parse_task(response)
-            situation, _ = update_situation(situation, obs_dict)
-            tasks = can_we_harvest(tasks, obs_dict, situation)
-        else:
-            tasks, situation = update_tasks(tasks, situation, obs_dict)
-        action_vectors = script_mapping(env, tasks, obs_dict)
-
-        obs, reward, done, info = env.step(action_vectors)
+        # FIXME: Could we 
+        actions = np.zeros((obs_dict["env"]["height"] * obs_dict["env"]["width"], 7))
+        obs, reward, done, info = env.step(actions)  # ai bot will ignore these actions
         obs_text, obs_dict = obs_2_text(obs[0])
         metric.update(obs_dict, old_obs)
         old_obs = obs_dict

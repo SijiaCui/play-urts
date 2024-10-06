@@ -6,10 +6,10 @@ llm_engine_temperature: 0
 llm_engine_max_tokens: 1024
 blue_prompt:
   - vanilla
-  - few_shot_prompt
+  - prompt_w_tips
 red_prompt:
   - vanilla
-  - zero_shot_prompt
+  - prompt_w_expert_tips
 video_fps: 10
 video_length: 2000
 map_index: 3

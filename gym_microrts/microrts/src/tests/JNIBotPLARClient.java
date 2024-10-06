@@ -134,7 +134,7 @@ public class JNIBotPLARClient {
             rewards[i] = rfs[i].getReward();
         }
         response.set(
-            null,
+            gs.getVectorObservation(player),
             rewards,
             dones,
             "{}",
@@ -174,7 +174,7 @@ public class JNIBotPLARClient {
         }
 
         response.set(
-            null,
+            gs.getVectorObservation(player),
             rewards,
             dones,
             "{}",

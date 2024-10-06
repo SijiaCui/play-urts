@@ -82,7 +82,7 @@ class MicroRTSGridModePLARVecEnv:
 
         if not os.path.exists(f"{self.microrts_path}/README.md"):
             print(MICRORTS_CLONE_MESSAGE)
-            os.system(f"git submodule update --init --recursive")
+            os.system("git submodule update --init --recursive")
 
         if autobuild:
             print(f"removing {self.microrts_path}/microrts.jar...")
@@ -279,3 +279,141 @@ class MicroRTSGridModePLARVecEnv:
         self.source_unit_mask = action_mask[:, :, :, 0].reshape(self.num_envs, -1)
         action_type_and_parameter_mask = action_mask[:, :, :, 1:].reshape(self.num_envs, self.height * self.width, -1)
         return action_type_and_parameter_mask
+
+
+class MicroRTSBotPLARVecEnv(MicroRTSGridModePLARVecEnv):
+    metadata = {"render.modes": ["human", "rgb_array"], "video.frames_per_second": 150}
+
+    def __init__(
+        self,
+        ai1s=[],
+        ai2s=[],
+        partial_obs=False,
+        max_steps=2000,
+        render_theme=2,
+        map_paths="maps/10x10/basesTwoWorkers10x10.xml",
+        reward_weight=np.array([0.0, 1.0, 0.0, 0.0, 0.0, 5.0]),
+        autobuild=True,
+        jvm_args=[],
+    ):
+
+        self.ai1s = ai1s
+        self.ai2s = ai2s
+        assert len(ai1s) == len(ai2s), "for each environment, a microrts ai should be provided"
+        self.num_envs = len(ai1s)
+        self.partial_obs = partial_obs
+        self.max_steps = max_steps
+        self.render_theme = render_theme
+        self.map_paths = map_paths
+        self.reward_weight = reward_weight
+
+        # read map
+        self.microrts_path = os.path.join(gym_microrts.__path__[0], "microrts")
+        if not os.path.exists(f"{self.microrts_path}/README.md"):
+            print(MICRORTS_CLONE_MESSAGE)
+            os.system("git submodule update --init --recursive")
+
+        if autobuild:
+            print(f"removing {self.microrts_path}/microrts.jar...")
+            if os.path.exists(f"{self.microrts_path}/microrts.jar"):
+                os.remove(f"{self.microrts_path}/microrts.jar")
+            print(f"building {self.microrts_path}/microrts.jar...")
+            root_dir = os.path.dirname(gym_microrts.__path__[0])
+            print(root_dir)
+            subprocess.run(["bash", "build.sh", "&>", "build.log"], cwd=f"{root_dir}")
+
+        root = ET.parse(os.path.join(self.microrts_path, self.map_paths[0])).getroot()
+        self.height, self.width = int(root.get("height")), int(root.get("width"))
+
+        # launch the JVM
+        if not jpype._jpype.isStarted():
+            registerDomain("ts", alias="tests")
+            registerDomain("ai")
+            registerDomain("rts")
+            jars = [
+                "microrts.jar",
+                "lib/bots/Coac.jar",
+                "lib/bots/Droplet.jar",
+                "lib/bots/GRojoA3N.jar",
+                "lib/bots/Izanagi.jar",
+                "lib/bots/MixedBot.jar",
+                "lib/bots/TiamatBot.jar",
+                "lib/bots/UMSBot.jar",
+                "lib/bots/mayariBot.jar",  # "MindSeal.jar"
+            ]
+            for jar in jars:
+                jpype.addClassPath(os.path.join(self.microrts_path, jar))
+            jpype.startJVM(*jvm_args, convertStrings=False)
+
+        # start microrts client
+        from rts.units import UnitTypeTable
+
+        self.real_utt = UnitTypeTable()
+        from ai.reward import (
+            AttackRewardFunction,
+            ProduceBuildingRewardFunction,
+            ProduceCombatUnitRewardFunction,
+            ProduceWorkerRewardFunction,
+            ResourceGatherRewardFunction,
+            RewardFunctionInterface,
+            WinLossRewardFunction,
+        )
+
+        self.rfs = JArray(RewardFunctionInterface)(
+            [
+                WinLossRewardFunction(),
+                ResourceGatherRewardFunction(),
+                ProduceWorkerRewardFunction(),
+                ProduceBuildingRewardFunction(),
+                AttackRewardFunction(),
+                ProduceCombatUnitRewardFunction(),
+                # CloserToEnemyBaseRewardFunction(),
+            ]
+        )
+        self.start_client()
+
+        # computed properties
+        # [num_planes_hp(5), num_planes_resources(5), num_planes_player(5),
+        # num_planes_unit_type(z), num_planes_unit_action(6)]
+
+        self.num_planes = [5, 5, 3, len(self.utt["unitTypes"]) + 1, 6]
+        if partial_obs:
+            self.num_planes = [5, 5, 3, len(self.utt["unitTypes"]) + 1, 6, 2]
+        self.observation_space = gym.spaces.Discrete(2)
+        self.action_space = gym.spaces.Discrete(2)
+
+    def start_client(self):
+
+        from ai.core import AI
+        from ts import JNIGridnetPLARVecClient as Client
+
+        self.vec_client = Client(
+            self.max_steps,
+            self.rfs,
+            os.path.expanduser(self.microrts_path),
+            self.map_paths,
+            JArray(AI)([ai1(self.real_utt) for ai1 in self.ai1s]),
+            JArray(AI)([ai2(self.real_utt) for ai2 in self.ai2s]),
+            self.real_utt,
+            self.partial_obs,
+        )
+        self.render_client = self.vec_client.botClients[0]
+        # get the unit type table
+        self.utt = json.loads(str(self.render_client.sendUTT()))
+
+    def reset(self):
+        responses = self.vec_client.reset([0 for _ in range(self.num_envs)])
+        obs = [np.array(ro) for ro in responses.observation]
+        return list(zip(obs, np.array(responses.resources)))
+    
+    def step_async(self, actions):
+        self.actions = JArray(JArray(JArray(JInt)))([JArray(JArray(JInt))([JArray(JInt)([1])])])
+    
+    def step(self, actions):
+        return self.step_wait()
+
+    def step_wait(self):
+        responses = self.vec_client.gameStep(self.actions, [0 for _ in range(self.num_envs)])
+        obs, reward, done = [np.array(ro) for ro in responses.observation], np.array(responses.reward), np.array(responses.done)
+        infos = [{"raw_rewards": item} for item in reward]
+        return list(zip(obs, np.array(responses.resources))), reward @ self.reward_weight, done[:, 0], infos

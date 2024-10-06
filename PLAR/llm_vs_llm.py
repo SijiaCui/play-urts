@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 def get_run_log_dir(args, map_path):
     """Get the directory to save the run logs."""
     run_dir = "runs/"
-    run_dir += f"{args.blue_prompt[0]}-{args.blue}_vs_{args.red_prompt[0]}-{args.red}/"
+    run_dir += f"{args.blue}_vs_{args.red}/"
     run_dir += map_path.split("maps/")[-1].split(".xml")[0].replace("/", "-")
     for i in range(1, int(1e9)):
         if not os.path.exists(f"{run_dir}_{i}"):
@@ -65,11 +65,11 @@ def end_game(env, reward, args, end_step):
     env.close()
     print("\n")
     if reward[0] > 0:
-        print(f"Game over at {end_step} step! The winner is blue side: {args.blue} with {args.blue_prompt[0]}-{args.blue_prompt[1]}")
+        print(f"Game over at {end_step} step! The winner is {args.blue} with {args.blue_prompt[1]}")
     elif reward[0] < 0:
-        print(f"Game over at {end_step} step! The winner is red side: {args.red} with {args.red_prompt[0]}-{args.red_prompt[1]}")
+        print(f"Game over at {end_step} step! The winner is {args.red} with {args.red_prompt[1]}")
     else:
-        print(f"Game over at {end_step} step! Draw! Between {args.blue} with {args.blue_prompt[0]}-{args.blue_prompt[1]} and {args.red} with {args.red_prompt[0]}-{args.red_prompt[1]}")
+        print(f"Game over at {end_step} step! Draw! Between {args.blue} with {args.blue_prompt[1]} and {args.red} with {args.red_prompt[1]}")
 
 def switch_fight_for(fight_for):
     if fight_for == "blue":
