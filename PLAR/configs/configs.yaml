@@ -9,7 +9,7 @@ blue_prompt:
   - zero_shot_prompt
 red_prompt:
   - vanilla
-  - prompt_w_reflect_tips
+  - prompt_w_expert_tips
 video_fps: 10
 video_length: 2000
 map_index: 3

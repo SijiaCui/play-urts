@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ====================
 def get_run_log_dir(args, map_path):
     """Get the directory to save the run logs."""
-    run_dir = "runs/llm_vs_llm/"
+    run_dir = f"{args.blue}_runs/llm_vs_llm/"
     run_dir += f"{args.blue_prompt[1]}_vs_{args.red_prompt[1]}/"
     run_dir += map_path.split("maps/")[-1].split(".xml")[0].replace("/", "-")
     for i in range(1, int(1e9)):

@@ -15,7 +15,7 @@ def extract_results(runs_dir):
     with open("results.log", "w") as f:
         f.write("=" * 80 + "\n")
         f.write(" " * 32 + "Matches Overview\n")
-        f.write("=" * 80 + "\n\n\n")
+        f.write("=" * 80 + "\n\n")
         for match, results in results_list.items():
             f.write(match + "\n")
             for round_index, result in results.items():
@@ -23,7 +23,7 @@ def extract_results(runs_dir):
             f.write("\n")
         f.write("\n" + "=" * 80 + "\n")
         f.write(" " * 32 + "Matches Details\n")
-        f.write("=" * 80 + "\n\n\n")
+        f.write("=" * 80 + "\n\n")
         for match, results in results_list.items():
             f.write(match + "\n")
             for round_index, result in results.items():
@@ -45,5 +45,7 @@ def get_result(run_dir):
     return result
 
 
-if __name__ == '__main__':
-    extract_results("PLAR/runs")
+if __name__ == "__main__":
+    extract_results("PLAR/Qwen2-72B-Instruct_runs")
+    # extract_results("PLAR/gpt-4o-mini_runs")
+    # extract_results("PLAR/deepseek-chat_runs")

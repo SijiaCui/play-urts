@@ -11,14 +11,14 @@ CHOSEN_MAPS = {
     "1": "maps/4x4/base4x4.xml",  # Blue: 1 base, 1 worker; Red: 1 base; not balance
     # standard
     "2": "maps/4x4/basesWorkers4x4.xml",  # Blue/Red: 1 base, 1 worker
-    "3": "maps/8x8/basesWorkers8x8.xml",  # Blue/Red: 1 base, 1 worker
-    "4": "maps/16x16/basesWorkers16x16.xml",  # Blue/Red: 1 base, 1 worker
+    "3": "maps/8x8/basesWorkers8x8.xml",  # Blue/Red: 1 base, 1 worker ✅
+    "4": "maps/16x16/basesWorkers16x16.xml",  # Blue/Red: 1 base, 1 worker ✅
     # standard multi-bases
-    "5": "maps/8x8/TwoBasesWorkers8x8.xml",  # Blue/Red: 2 base, 2 worker
+    "5": "maps/8x8/TwoBasesWorkers8x8.xml",  # Blue/Red: 2 base, 2 worker ✅
     "6": "maps/8x8/ThreeBasesWorkers8x8.xml",  # Blue/Red: 3 base, 3 worker
-    "7": "maps/8x8/FourBasesWorkers8x8.xml",  # Blue/Red: 4 base, 4 worker
+    "7": "maps/8x8/FourBasesWorkers8x8.xml",  # Blue/Red: 4 base, 4 worker ✅
     "8": "maps/12x12/SixBasesWorkers12x12.xml",  # Blue/Red: 6 base, 6 worker
-    "9": "maps/16x16/EightBasesWorkers16x16.xml",  # Blue/Red: 8 base, 8 worker
+    "9": "maps/16x16/EightBasesWorkers16x16.xml",  # Blue/Red: 8 base, 8 worker ✅
     "10": "maps/EightBasesWorkers16x12.xml",  # Blue/Red: 8 base, 8 worker
     # 8x8 Obstacle
     "11": "maps/8x8/basesWorkers8x8Obstacle.xml",  # Blue/Red: 1 base, 1 worker; Obstacle
@@ -352,7 +352,7 @@ def update_tasks(tasks: List[Tuple], situation, obs_dict):
     def process_tasks(tasks, situation_key, unit_index, task_types, changes_condition):
         for unit_type in new_situation[situation_key].keys():
             changes = max(changes_condition(unit_type), 0)
-            for task in tasks:
+            for task in tasks[:]:
                 if (task[0] in task_types and task[1][unit_index] == unit_type and changes > 0):
                     print(f"Completed task: {task[0]}{task[1]}")
                     tasks.remove(task)
@@ -378,7 +378,7 @@ def can_we_harvest(tasks, obs_dict, situation):
             if unit["resource_num"] > 0:
                 num_worker_with_resource += 1
 
-    for task in tasks:
+    for task in tasks[:]:
         if task[0] == TASK_HARVEST_MINERAL:
             is_exist_mine = obs_dict["units"][task[1]] and obs_dict["units"][task[1]]["type"] == "resource"
             is_exist_base = situation[utils.FIGHT_FOR]["base"] > 0

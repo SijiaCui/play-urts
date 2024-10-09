@@ -6,6 +6,7 @@ from PLAR.grounding import obs_2_text, script_mapping
 from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks, update_situation, can_we_harvest
 from PLAR.llm_agents import LLMAgent
 from PLAR.utils.metric import Metric
+import PLAR.utils as utils
 from gym_microrts import microrts_ai
 from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
 from gym_microrts.envs.plar_vec_video_recorder import PLARVecVideoRecorder
@@ -23,14 +24,53 @@ AI_MAPPING = {
     "naiveMCTSAI": microrts_ai.naiveMCTSAI
 }
 
-
+# responses = [
+#     """
+#     START OF TASK
+#     [Harvest Mineral](1, 0)
+#     [Harvest Mineral](0, 0)
+#     [Produce Unit](worker, east)
+#     [Produce Unit](worker, south)
+#     [Produce Unit](worker, east)
+#     [Produce Unit](worker, south)
+#     [Build Building](barrack, (2, 4))
+#     [Attack Enemy](worker, worker)
+#     [Attack Enemy](worker, worker)
+#     [Attack Enemy](worker, worker)
+#     [Attack Enemy](worker, worker)
+#     """,
+#     """
+#     START OF TASK
+#     [Harvest Mineral](1, 0)
+#     [Harvest Mineral](0, 0)
+#     [Produce Unit](worker, east)
+#     [Produce Unit](worker, south)
+#     [Produce Unit](worker, east)
+#     [Produce Unit](worker, south)
+#     [Produce Unit](ranged, east)
+#     [Produce Unit](ranged, east)
+#     [Produce Unit](ranged, east)
+#     [Produce Unit](ranged, east)
+#     [Produce Unit](ranged, east)
+#     [Produce Unit](ranged, east)
+#     [Attack Enemy](worker, worker)
+#     [Attack Enemy](worker, worker)
+#     [Attack Enemy](worker, worker)
+#     [Attack Enemy](worker, worker)
+#     [Attack Enemy](ranged, base)
+#     [Attack Enemy](ranged, base)
+#     [Attack Enemy](ranged, base)
+#     [Attack Enemy](ranged, barrack)
+#     [Attack Enemy](ranged, barrack)
+#     """,
+# ]
 # ====================
 #        Utils
 # ====================
 def get_run_log_dir(args, map_path):
     """Get the directory to save the run logs."""
-    run_dir = "runs/llm_vs_rule/" if args.red in AI_MAPPING else "runs/rule_vs_llm/"
-    blue = args.blue[1] if args.blue in AI_MAPPING else args.blue_prompt[1]
+    run_dir = f"{args.blue}_runs/llm_vs_rule/" if args.red in AI_MAPPING else f"{args.red}_runs/rule_vs_llm/"
+    blue = args.blue if args.blue in AI_MAPPING else args.blue_prompt[1]
     red = args.red if args.red in AI_MAPPING else args.red_prompt[1]
     run_dir += f"{blue}_vs_{red}/"
     run_dir += map_path.split("maps/")[-1].split(".xml")[0].replace("/", "-")
@@ -87,11 +127,21 @@ def end_game(env, reward, args, end_step):
         print(f"Game over at {end_step} step! Draw! Between {args.blue} with {args.blue_prompt[1]} and {args.red}")
 
 
+def switch_fight_for(fight_for):
+    if fight_for == "blue":
+        utils.FIGHT_FOR = "blue"
+        utils.ENEMY = "red"
+    else:
+        utils.FIGHT_FOR = "red"
+        utils.ENEMY = "blue"
+
+
 def main():
     # ====================
     #        Init
     # ====================
     args = load_args()
+    fight_for = "blue" if args.red in AI_MAPPING else "red"
     map_path = CHOSEN_MAPS[args.map_index]
     run_dir = get_run_log_dir(args, map_path)
     map_name = map_path.split("/")[-1].split(".xml")[0]
@@ -103,6 +153,7 @@ def main():
     log_file = init_logging(run_dir)
 
     obs = env.reset()
+    switch_fight_for(fight_for)
     obs_text, obs_dict = obs_2_text(obs[0])
     situation = None
     old_obs = obs_dict
@@ -116,6 +167,8 @@ def main():
 
         if i % args.tasks_update_interval == 0:
             response = llm_agent.run(obs_text)
+            # print(obs_text)
+            # response = responses[0] if i <= 200 else responses[1]
             tasks = parse_task(response)
             situation, _ = update_situation(situation, obs_dict)
             tasks = can_we_harvest(tasks, obs_dict, situation)

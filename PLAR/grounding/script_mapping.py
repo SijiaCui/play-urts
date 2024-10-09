@@ -164,12 +164,20 @@ def assign_task_attack_enemy(
     # [Attack Enemy](unit_type, enemy_type)
     closest_dist = {}
     enemy_locs = []
+    base_loc = None
+    for unit in exist_units.values():
+        if isinstance(unit, dict) and unit["type"] == "base":
+            base_loc = unit["location"]
+            break
     for enemy in obs_dict[utils.ENEMY].values():
         if isinstance(enemy, dict) and enemy["type"] == task_params[1]:
             enemy_locs.append(enemy["location"])
     if len(enemy_locs) == 0:
         print(f"Pending task: {TASK_ATTACK_ENEMY}{task_params}")
         return exist_units
+    if base_loc is not None:
+        enemy_loc = path_planner.get_manhattan_nearest(base_loc, enemy_locs)
+        enemy_locs = [enemy_loc]
     for unit in exist_units.values():
         if unit["task_type"] == "[noop]" and unit["type"] == task_params[0]:
             nearest_loc = path_planner.get_path_nearest(unit["location"], enemy_locs)
@@ -221,7 +229,10 @@ def script_mapping(
     width = obs_dict["env"]["width"]
 
     action_masks = env.get_action_mask()
-    action_masks = action_masks[0] if utils.FIGHT_FOR == "blue" else action_masks[1]
+    if action_masks.shape[0] == 1:
+        action_masks = action_masks[0]
+    else:
+        action_masks = action_masks[0] if utils.FIGHT_FOR == "blue" else action_masks[1]
     action_masks = action_masks.reshape(-1, action_masks.shape[-1])
 
     path_planer = path_planning(compute_valid_map(obs_dict))
@@ -244,31 +255,36 @@ def adapt_task_harvest_mineral_params(unit, obs_dict, path_planner: path_plannin
     # (mineral_loc) -> (mineral_loc, tgt_loc, base_loc, return_loc)
     mineral_loc = unit["task_params"]
     tgt_locs = get_around_locs(mineral_loc, obs_dict)
-    for loc in tgt_locs:
+    for loc in tgt_locs[:]:
         if obs_dict["units"][loc] != {} and unit["location"] != loc:
             tgt_locs.remove(loc)
-    tgt_loc = path_planner.get_manhattan_nearest(unit["location"], tgt_locs)
-    for _unit in obs_dict[utils.FIGHT_FOR].values():
-        if isinstance(_unit, dict) and _unit["type"] == "base":
-            base_loc = _unit["location"]
-            return_locs = get_around_locs(base_loc, obs_dict)
-            for loc in return_locs:
-                if obs_dict["units"][loc] != {} and unit["location"] != loc:
-                    return_locs.remove(loc)
-            return_loc = path_planner.get_manhattan_nearest(unit["location"], return_locs)
-            return (mineral_loc, tgt_loc, base_loc, return_loc)
-    return (mineral_loc, unit["location"], unit["location"], unit["location"])
+    if len(tgt_locs) > 0:
+        tgt_loc = path_planner.get_manhattan_nearest(unit["location"], tgt_locs)
+        for _unit in obs_dict[utils.FIGHT_FOR].values():
+            if isinstance(_unit, dict) and _unit["type"] == "base":
+                base_loc = _unit["location"]
+                return_locs = get_around_locs(base_loc, obs_dict)
+                for loc in return_locs[:]:
+                    if obs_dict["units"][loc] != {} and unit["location"] != loc:
+                        return_locs.remove(loc)
+                if len(return_locs) > 0:
+                    return_loc = path_planner.get_manhattan_nearest(unit["location"], return_locs)
+                    return (mineral_loc, tgt_loc, base_loc, return_loc)
+    return (mineral_loc, unit["location"], unit["location"], unit["location"])  # stay
 
 
 def adapt_task_build_building_params(unit, obs_dict, path_planner: path_planning):
     # (building_type, building_loc) -> (building_type, building_loc, tgt_loc)
     building_type, building_loc = unit["task_params"]
     tgt_locs = get_around_locs(building_loc, obs_dict)
-    for tgt_loc in tgt_locs:
+    for tgt_loc in tgt_locs[:]:
         if obs_dict["units"][tgt_loc] != {} and unit["location"] != tgt_loc:
             tgt_locs.remove(tgt_loc)
-    tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
-    return (building_type, building_loc, tgt_loc)
+    if len(tgt_locs) > 0:
+        tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
+        return (building_type, building_loc, tgt_loc)
+    else:
+        return (building_type, building_loc, unit["location"])  # stay
 
 
 def adapt_task_attack_enemy_params(unit, obs_dict, path_planner: path_planning):
@@ -333,11 +349,11 @@ def get_around_locs(loc, obs_dict):
         (loc[0], loc[1] + 1),
         (loc[0], loc[1] - 1),
     ]
-    around_locs = locs[:]
-    for around_loc in locs:
-        if around_loc not in obs_dict["units"]:
-            around_locs.remove(around_loc)
-    return around_locs
+
+    for loc in locs[:]:
+        if loc not in obs_dict["units"]:
+            locs.remove(loc)
+    return locs
 
 
 def compute_valid_map(obs_dict):

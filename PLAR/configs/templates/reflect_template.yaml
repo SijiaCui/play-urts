@@ -44,3 +44,5 @@ REFLECT_TEMPLATE: |
   You are now the **{fight_for}** side. Please select the three most valuable suggestions from the following list based on the current situation:
 
   {examples}
+
+  You only need to output the suggestions in the corresponding format without including any additional content.

@@ -16,8 +16,7 @@ INTRODUCTION: |
   - Heavy Unit: 4 HP, costs 2 resources, takes 120 time units to build. Can [Attack Enemy] (4 damage).
   - Ranged Unit: 1 HP, costs 2 resources, takes 100 time units to build. Can [Attack Enemy] from 3 distance (1 damage, range 3). Ranged units may be the key to your victory. Experts like to use them.
 
-  The prerequisite for manufacturing light, heavy and long-range weapons is to have a barracks.
-  Note that when a unit is next to a base or barrack, it blocks the output they produce, so please spreading out where the units are deployed.
+  The prerequisite for producing light, heavy and ranged units is to have a barrack.
 
   ## Task Space
   Develop a winning task plan using allowed task space: 
@@ -40,7 +39,7 @@ INTRODUCTION: |
   Please note that your plans will be executed in order, so the one listed first will be executed first. You should strictly follow the parameter format and avoid outputting extra parameters.
   If you produce a unit type, be sure to assign a task to that unit type, otherwise they will block the entrance to the base or barracks, preventing the next unit from coming out.
   Please pay attention to the actual location of your current base. If you need to harvest resources, please go to the nearest mine location. It is not recommended to build a barracks too early, because it takes a long time and a lot of resources, and we cannot guarantee whether it is safe during this period.
-
+  Even if the enemy has only one unit left, it is strongly recommended that you use two units (i.e. two [Attack Enemy]) missions to attack him to avoid infinite chase attacks.
 
 EXAMPLES: |
   

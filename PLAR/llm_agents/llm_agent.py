@@ -1,23 +1,22 @@
-import tiktoken
 import yaml
-from langchain_openai import AzureChatOpenAI
+import tiktoken
+from openai import OpenAI
 
-from langchain_core.messages import HumanMessage
-
-from PLAR.llm_agents.prompts import zero_shot_prompt, few_shot_prompt, prompt_w_tips, prompt_w_opponent, reflect_prompt
+from PLAR.llm_agents.prompts import zero_shot_prompt, few_shot_prompt, reflect_prompt, zero_shot_w_tips, few_shot_w_tips
 from PLAR.utils.utils import parse_tips
 import PLAR.utils as utils
 
 class LLMAgent:
 
     def __init__(self, engine, temperature, max_tokens, map_name, prompt_config) -> None:
-        # qwen: qwen, gpt: azuregpt, llama: llama2
         if "qwen" in engine.lower():
             self.llm = Qwen(engine, temperature, max_tokens)
-        elif "gpt" in engine.lower():
-            self.llm = AzureChatOpenAI(engine, temperature, max_tokens)
+        elif "gpt" in engine.lower() or "o1" in engine.lower():
+            self.llm = GPT(engine, temperature, max_tokens)
         elif "llama" in engine.lower():
             self.llm = Llama(engine, temperature, max_tokens)
+        elif "deepseek" in engine.lower():
+            self.llm = DeepSeek(engine, temperature, max_tokens)
         else:
             raise ValueError("Invalid engine name")
         self.map_name = map_name
@@ -46,9 +45,19 @@ class LLMAgent:
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-        elif self.prompt_config[1] == "prompt_w_reflect_tips":
+        elif self.prompt_config[1] == "zero_shot_w_expert_tips":
+            with open(f"/root/desc/play-urts/PLAR/configs/templates/reflection/{self.map_name}_few_shot.yaml") as f:
+                tips = yaml.safe_load(f)["EXAMPLES"]
+            self.prompt = zero_shot_w_tips
+            kwargs = {
+                "instruction": instruction,
+                "tips": tips,
+                "observation": self.obs,
+                "fight_for": utils.FIGHT_FOR,
+            }
+        elif self.prompt_config[1] == "few_shot_w_reflect_tips":
             tips = parse_tips(self.reflect())
-            self.prompt = prompt_w_tips
+            self.prompt = few_shot_w_tips
             kwargs = {
                 "instruction": instruction,
                 "examples": examples,
@@ -56,10 +65,10 @@ class LLMAgent:
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-        elif self.prompt_config[1] == "prompt_w_expert_tips":
+        elif self.prompt_config[1] == "few_shot_w_expert_tips":
             with open(f"/root/desc/play-urts/PLAR/configs/templates/reflection/{self.map_name}_few_shot.yaml") as f:
                 tips = yaml.safe_load(f)["EXAMPLES"]
-            self.prompt = prompt_w_tips
+            self.prompt = few_shot_w_tips
             kwargs = {
                 "instruction": instruction,
                 "examples": examples,
@@ -111,24 +120,28 @@ class LLM:
         pass
 
 
-class AzureGPT(LLM):
+class GPT(LLM):
     def __init__(self, engine, temperature, max_tokens) -> None:
-        self.client = AzureChatOpenAI(
-            deployment_name = engine,
-            temperature = temperature, 
-            max_tokens = max_tokens
-        )
+        import os
+
+        self.client = OpenAI(base_url="https://api.openai-proxy.live/v1", api_key=os.getenv("OPENAI_API_KEY"))
         self.engine = engine
         self.temperature = temperature
         self.max_tokens = max_tokens
 
     def __call__(self, prompt) -> str:
         super().__call__(prompt)
-        self.client([HumanMessage(content=prompt)]).content
+        response = self.client.chat.completions.create(
+            model=self.engine,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
+        return response.choices[0].message.content
 
     def is_excessive_token(self, prompt) -> bool:
-        token_limit_gpt35 = 3896 # gpt3.5 4k, set limit 3896
-        return tiktoken.encoding_for_model(self.engine).encode(prompt) > token_limit_gpt35
+        token_limit_gpt = 128000
+        return len(tiktoken.encoding_for_model(self.engine).encode(prompt)) > token_limit_gpt
 
 
 class Qwen(LLM):
@@ -162,3 +175,36 @@ class Qwen(LLM):
 
 class Llama(LLM):
     pass
+
+
+class DeepSeek(LLM):
+    def __init__(self, engine, temperature, max_tokens) -> None:
+        from openai import OpenAI
+        import os
+        self.client = OpenAI(base_url="https://api.deepseek.com", api_key=os.getenv("DEEPSEEK_API_KEY"))
+
+        self.engine = engine
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+
+    def __call__(self, prompt) -> str:
+        super().__call__(prompt)
+        response = self.client.chat.completions.create(
+            model=self.engine,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+            stream=False
+        )
+        return response.choices[0].message.content
+    
+    def is_excessive_token(self, prompt) -> bool:
+        token_limit_deepseek = 128000
+        return len(prompt) > token_limit_deepseek
+
+
+if __name__ == "__main__":
+    # llm_agent = LLMAgent("gpt-4o-mini", 0, 1024, None, None)
+    # llm_agent = LLMAgent("deepseek-chat", 0, 1024, None, None)
+    llm_agent = LLMAgent("Qwen2-72B-Instruct", 0, 1024, None, None)
+    print(llm_agent.llm("who are you"))

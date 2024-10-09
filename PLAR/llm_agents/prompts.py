@@ -22,7 +22,12 @@ few_shot_prompt = PromptTemplate(
     template=INSTRUCTION + INTRODUCTION + EXAMPLES + START,
 )
 
-prompt_w_tips = PromptTemplate(
+zero_shot_w_tips = PromptTemplate(
+    input_variables=["instruction", "tips", "observation", "fight_for"],
+    template=INSTRUCTION + INTRODUCTION  + START + TIPS,
+)
+
+few_shot_w_tips = PromptTemplate(
     input_variables=["instruction", "examples", "tips", "observation", "fight_for"],
     template=INSTRUCTION + INTRODUCTION + EXAMPLES + START + TIPS,
 )
