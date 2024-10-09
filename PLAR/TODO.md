@@ -44,6 +44,18 @@ LLM/CoT/ReAct
 - [x] ！！！玩家资源 obs 一直是 0（环境问题）
 - [x] 环境在游戏结束时自动 reset，导致无法的到最后一步的 obs，导致 metric 记录不准确
 
+# 1011-20:00
+## SijiaCui
+- [ ] Method 3.4, introduction refine
+- [ ] exp: 0,
+
+## ShuaiXu
+- [ ] exp:
+
+## AiyaoHe
+- [ ] TBD
+
+
 # 1009
 ## SijiaCui
 - [ ] Abstarct refine
