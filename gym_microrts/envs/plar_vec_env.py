@@ -410,6 +410,7 @@ class MicroRTSBotPLARVecEnv(MicroRTSGridModePLARVecEnv):
         self.actions = JArray(JArray(JArray(JInt)))([JArray(JArray(JInt))([JArray(JInt)([1])])])
     
     def step(self, actions):
+        self.step_async(actions)
         return self.step_wait()
 
     def step_wait(self):

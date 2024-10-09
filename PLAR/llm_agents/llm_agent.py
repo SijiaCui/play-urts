@@ -46,7 +46,7 @@ class LLMAgent:
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-        elif self.prompt_config[1] == "prompt_w_tips":
+        elif self.prompt_config[1] == "prompt_w_reflect_tips":
             tips = parse_tips(self.reflect())
             self.prompt = prompt_w_tips
             kwargs = {

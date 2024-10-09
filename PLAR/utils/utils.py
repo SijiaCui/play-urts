@@ -73,7 +73,7 @@ def load_args():
     parser.add_argument("--red_prompt", nargs='+', type=str, default=config["red_prompt"])
 
     # video recorder parameters
-    parser.add_argument("--video_record", action="store_true")
+    parser.add_argument("--record_video", action="store_true")
     parser.add_argument("--video_fps", type=int, default=int(config["video_fps"]))
     parser.add_argument("--video_length", type=int, default=int(config["video_length"]))
 

@@ -29,8 +29,10 @@ AI_MAPPING = {
 # ====================
 def get_run_log_dir(args, map_path):
     """Get the directory to save the run logs."""
-    run_dir = "runs/"
-    run_dir += f"{args.blue}_vs_{args.red}/"
+    run_dir = "runs/llm_vs_rule/" if args.red in AI_MAPPING else "runs/rule_vs_llm/"
+    blue = args.blue[1] if args.blue in AI_MAPPING else args.blue_prompt[1]
+    red = args.red if args.red in AI_MAPPING else args.red_prompt[1]
+    run_dir += f"{blue}_vs_{red}/"
     run_dir += map_path.split("maps/")[-1].split(".xml")[0].replace("/", "-")
     for i in range(1, int(1e9)):
         if not os.path.exists(f"{run_dir}_{i}"):
@@ -45,16 +47,17 @@ def get_run_log_dir(args, map_path):
 
 def init_environment(args, map_path, run_dir):
     """Initialize the environment and video recorder."""
+    ai = args.red if args.red in AI_MAPPING else args.blue
     env = MicroRTSGridModePLARVecEnv(
         num_selfplay_envs=0,
         num_bot_envs=1,
         max_steps=args.max_steps,
-        ai2s=[AI_MAPPING[args.red]],
+        ai2s=[AI_MAPPING[ai]],
         map_paths=[map_path],
         reward_weight=np.array([10, 0, 0, 0, 0, 0]),
         autobuild=False,
     )
-    if args.video_record:
+    if args.record_video:
         env.metadata["video.frames_per_second"] = args.video_fps
         env = PLARVecVideoRecorder(
             env,
@@ -92,7 +95,10 @@ def main():
     map_path = CHOSEN_MAPS[args.map_index]
     run_dir = get_run_log_dir(args, map_path)
     map_name = map_path.split("/")[-1].split(".xml")[0]
-    llm_agent = LLMAgent(args.blue, args.temperature, args.max_tokens, map_name, args.blue_prompt)
+
+    engine = args.blue if args.red in AI_MAPPING else args.red
+    prompt_config = args.blue_prompt if args.red in AI_MAPPING else args.red_prompt
+    llm_agent = LLMAgent(engine, args.temperature, args.max_tokens, map_name, prompt_config)
     env = init_environment(args, map_path, run_dir)
     log_file = init_logging(run_dir)
 

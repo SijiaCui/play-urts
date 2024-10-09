@@ -1,52 +1,49 @@
 import os
-import yaml
 
 
 def extract_results(runs_dir):
-    results = []
+    results_list = {}
     matches = os.listdir(runs_dir)
-    for match in matches:
-        for run in os.listdir(os.path.join(runs_dir, match)):
-            result = get_results(os.path.join(runs_dir, match, run))
-            if result is not None:
-                results.append(result)
-    matches_statistics = get_matches_statistics(results)
+    match_types = os.listdir(runs_dir)
+    for match_type in match_types:
+        matches = os.listdir(os.path.join(runs_dir, match_type))
+        for match in matches:
+            match_name = match.replace("_vs_", " vs ")
+            results_list[match_name] =  {}
+            for run in os.listdir(os.path.join(runs_dir, match_type, match)):
+                results_list[match_name].update(get_result(os.path.join(runs_dir, match_type, match, run)))
     with open("results.log", "w") as f:
-        for match, statistics in matches_statistics.items():
+        f.write("=" * 80 + "\n")
+        f.write(" " * 32 + "Matches Overview\n")
+        f.write("=" * 80 + "\n\n\n")
+        for match, results in results_list.items():
             f.write(match + "\n")
-            f.write(str(statistics))
-            f.write("\n\n\n")
-        for result in results:
-            f.write(result["match"] + "\n")
-            f.write(result["result"])
+            for round_index, result in results.items():
+                f.write(f"{round_index} winner: {result['winner']}\n")
             f.write("\n")
+        f.write("\n" + "=" * 80 + "\n")
+        f.write(" " * 32 + "Matches Details\n")
+        f.write("=" * 80 + "\n\n\n")
+        for match, results in results_list.items():
+            f.write(match + "\n")
+            for round_index, result in results.items():
+                f.write(f"{round_index} detail: \n{result['detail']}\n")
 
 
-def get_results(run_dir):
+def get_result(run_dir):
+    round_index = run_dir.split("_")[-1]
     result = {}
-    with open(os.path.join(run_dir, "configs.yaml"), "r") as f:
-        config = yaml.safe_load(f)
-    blue = f"{config['blue']}-{config['blue_prompt'][0]}-{config['blue_prompt'][1]}"
-    red = f"{config['red']}" if "AI" in config['red'] else f"{config['red']}-{config['red_prompt'][0]}-{config['red_prompt'][1]}"
-    result["match"] = f"{blue} vs {red}"
-    with open(os.path.join(run_dir, "run.log"), "r") as f:
+    log_path = os.path.join(run_dir, "run.log")
+    if not os.path.exists(log_path):
+        return result
+    with open(log_path, "r") as f:
         text = f.read()
     if "Game over" in text:
-        result["result"] = "Game over" + text.split("Game over")[-1]
-        return result
-    else:
-        return None
-
-
-def get_matches_statistics(results):
-    blue_vs_red_statistics = {}
-    for result in results:
-        if result["match"] not in blue_vs_red_statistics:
-            blue_vs_red_statistics[result["match"]] = []
-        winner = result["result"].split("The winner is ")[-1].split("\n")[0] if "The winner is" in result["result"] else "Draw"
-        blue_vs_red_statistics[result["match"]].append(winner)
-    return blue_vs_red_statistics
+        detail = "Game over" + text.split("Game over")[-1]
+        winner = detail.split("The winner is ")[-1].split("\n")[0] if "The winner is" in detail else "draw"
+        result[f"round {round_index}"] = {"winner": winner, "detail": detail}
+    return result
 
 
 if __name__ == '__main__':
-    results = extract_results("PLAR/runs")
+    extract_results("PLAR/runs")

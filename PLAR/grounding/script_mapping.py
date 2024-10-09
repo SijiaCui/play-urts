@@ -3,7 +3,7 @@ from typing import List, Dict, Union, Tuple
 
 __all__ = ["script_mapping"]
 
-from .task2actions import (
+from PLAR.grounding.task2actions import (
     TASK_DEPLOY_UNIT,
     TASK_HARVEST_MINERAL,
     TASK_BUILD_BUILDING,
@@ -327,14 +327,15 @@ def get_direction_loc(unit, direction):
 
 
 def get_around_locs(loc, obs_dict):
-    around_locs = [
+    locs = [
         (loc[0] + 1, loc[1]),
         (loc[0] - 1, loc[1]),
         (loc[0], loc[1] + 1),
         (loc[0], loc[1] - 1),
     ]
-    for around_loc in around_locs:
-        if around_loc not in obs_dict["units"].keys():
+    around_locs = locs[:]
+    for around_loc in locs:
+        if around_loc not in obs_dict["units"]:
             around_locs.remove(around_loc)
     return around_locs
 
@@ -403,3 +404,7 @@ def auto_choose_target(unit: dict, obs_dict: dict, path_planner: path_planning) 
         if type_indices.size > 0:
             return targets[indices[type_indices[0]]]
     return targets[np.random.choice(len(targets))]
+
+if __name__ == "__main__":
+    obs = {"units": {(0, 6): 0, (1,7): 1}}
+    print(get_around_locs((0,7), obs))

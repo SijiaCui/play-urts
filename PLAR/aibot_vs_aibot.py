@@ -28,7 +28,7 @@ AI_MAPPING = {
 # ====================
 def get_run_log_dir(args, map_path):
     """Get the directory to save the run logs."""
-    run_dir = "runs/"
+    run_dir = "runs/rule_vs_rule/"
     run_dir += f"{args.blue}_vs_{args.red}/"
     run_dir += map_path.split("maps/")[-1].split(".xml")[0].replace("/", "-")
     for i in range(1, int(1e9)):
@@ -52,7 +52,7 @@ def init_environment(args, map_path, run_dir):
         reward_weight=np.array([10, 0, 0, 0, 0, 0]),
         autobuild=False,
     )
-    if args.video_record:
+    if args.record_video:
         env.metadata["video.frames_per_second"] = args.video_fps
         env = PLARVecVideoRecorder(
             env,
@@ -75,9 +75,9 @@ def end_game(env, reward, args, end_step):
     env.close()
     print("\n")
     if reward[0] > 0:
-        print(f"Game over at {end_step} step! The winner is {args.blue}")
+        print(f"Game over at {end_step} step! The winner is blue {args.blue}")
     elif reward[0] < 0:
-        print(f"Game over at {end_step} step! The winner is {args.red}")
+        print(f"Game over at {end_step} step! The winner is red {args.red}")
     else:
         print(f"Game over at {end_step} step! Draw! Between {args.blue} and {args.red}")
 
@@ -101,7 +101,7 @@ def main():
     #        Gaming
     # ====================
     for i in range(args.max_steps):
-        # FIXME: Could we 
+        # FIXME: Could we do without this useless action?
         actions = np.zeros((obs_dict["env"]["height"] * obs_dict["env"]["width"], 7))
         obs, reward, done, info = env.step(actions)  # ai bot will ignore these actions
         obs_text, obs_dict = obs_2_text(obs[0])
