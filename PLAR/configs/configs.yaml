@@ -3,7 +3,7 @@ tasks_update_interval: 100
 blue: Qwen2-72B-Instruct
 red: Qwen2-72B-Instruct
 llm_engine_temperature: 0
-llm_engine_max_tokens: 1024
+llm_engine_max_tokens: 512
 blue_prompt:
   - vanilla
   - zero_shot_prompt

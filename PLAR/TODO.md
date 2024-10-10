@@ -13,6 +13,29 @@
   - [x] 游戏规则
   - [x] 任务空间和参数要求
 
+---
+## Exp.
+
+- [ ] 环境确实是 unseen, metrics: ? QA 正确率
+  - [ ] **unseen**: SC2 QA 正确率
+  - [ ] **complex**: metrics: action space, multi-agent, 地图多样
+  - [ ] other methods? 
+    - [ ] 直接生成 prompt:底层动作 0010，o1做不好
+    - [ ] 纯写规则: 多少参数，多少层面优化，明显难搞
+            
+- [ ] Does PLAP is 有效的，metrics: 打败了 XX AI
+  - [ ] zs, fs, zs-tips, fs-tips, %reflection
+  - [ ] qwen√, deepseek√, 4o-mini√, 4o
+  - [ ] 建了units，打了血，...，list metrics，图
+  - [ ] 模型多点 vs AI，地图8x8，温度0, 
+
+- [ ] 我们这个benchmark llm vs llm, 结果怎么样...
+  - [ ] which llm stronger
+  - [ ] 地图8x8，温度0, same method(zero-shot), llm1 vs llm2
+    
+- [ ] appendix:
+  - [ ]  温度0.7，地图16x16
+
 
 ## LLM PLAY RTS
 
@@ -27,7 +50,7 @@
 
 ### Rule
 
-- coacAI：太强了
+- coacAI：SOTA
 - LighthRush：训练一名工人并让其收集资源。一旦有足够的资源建造兵营，就建造一个兵营。从那一刻起，不断训练轻型单位，并立即派遣它们攻击最近的敌方单位
 - WorkerRush：不断训练工人，让其中一个工人收集资源，并派遣所有其他工人立即攻击最近的敌方单位
 - NaiveMCTS：将 NaiveMonteCarlo 的朴素采样思想与 MCTS 相结合

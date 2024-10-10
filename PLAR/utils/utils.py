@@ -69,8 +69,8 @@ def load_args():
     parser.add_argument("--red", type=str, default=config["red"])
     parser.add_argument("--temperature", type=float, default=float(config["llm_engine_temperature"]))
     parser.add_argument("--max_tokens", type=int, default=int(config["llm_engine_max_tokens"]))
-    parser.add_argument("--blue_prompt", nargs='+', type=str, default=config["blue_prompt"])
-    parser.add_argument("--red_prompt", nargs='+', type=str, default=config["red_prompt"])
+    parser.add_argument("--blue_prompt", type=str, default=config["blue_prompt"])
+    parser.add_argument("--red_prompt", type=str, default=config["red_prompt"])
 
     # video recorder parameters
     parser.add_argument("--record_video", action="store_true")
@@ -365,12 +365,12 @@ def update_tasks(tasks: List[Tuple], situation, obs_dict):
 
     process_tasks(tasks, utils.ENEMY, 1, [TASK_ATTACK_ENEMY],
         lambda unit_type: old_situation[utils.ENEMY][unit_type] - new_situation[utils.ENEMY][unit_type])
-    tasks = can_we_harvest(tasks, obs_dict, situation)
+    tasks = check_task(tasks, obs_dict, situation)
     return tasks, new_situation
 
-def can_we_harvest(tasks, obs_dict, situation):
+def check_task(tasks, obs_dict, situation, aggressive=False):
     import PLAR.utils as utils
-    from PLAR.grounding import TASK_HARVEST_MINERAL
+    from PLAR.grounding import TASK_HARVEST_MINERAL, TASK_ATTACK_ENEMY
 
     num_worker_with_resource = 0
     for unit in obs_dict[utils.FIGHT_FOR].values():
@@ -387,11 +387,19 @@ def can_we_harvest(tasks, obs_dict, situation):
                 num_worker_with_resource -= 1
             else:
                 tasks.remove(task)
+        # TBD: Can we increase the priority of attacking buildings? 
+        if task[0] == TASK_ATTACK_ENEMY and task[1][1] == "base":
+            if situation[utils.ENEMY]["base"] <= 0:
+                tasks.remove(task)
+                tasks.append(task)
+            elif aggressive:
+                tasks.remove(task)
+                tasks.insert(0, task)
+        if task[0] == TASK_ATTACK_ENEMY and task[1][1] == "barrack":
+            if situation[utils.ENEMY]["barrack"] <= 0:
+                tasks.remove(task)
+                tasks.append(task)
+            elif aggressive:
+                tasks.remove(task)
+                tasks.insert(0, task)
     return tasks
-
-if __name__ == '__main__':
-    aa=0
-    if aa:
-        print("aa")
-    else:
-        print("bb")

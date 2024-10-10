@@ -21,3 +21,4 @@ data.json
 .env
 *.log
 *runs*/
+*.tar.gz

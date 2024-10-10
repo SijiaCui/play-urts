@@ -1,5 +1,5 @@
 INSTRUCTION: |
-  You are an RTS game expert tasked with planning a winning task plan in MicroRTS based on the provided scenario. {instruction}
+  You are an RTS game expert tasked with planning a winning task plan in MicroRTS based on the provided scenario.
 
 INTRODUCTION: |
   
@@ -66,4 +66,4 @@ START: |
   {observation}
 
   If you have zero resources and there are no mineral fields on the map, you need to let all your units attack the enemy's units and buildings to launch the final decisive battle.
-  You are now the **{fight_for}** side. Please make a task plan to win the game based on current situation.
+  You are now the **{fight_for}** side. Please make a task plan to win the game based on current situation. You only need to output the task plan in the corresponding format without including any additional content.

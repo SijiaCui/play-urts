@@ -4,7 +4,7 @@ import yaml
 import numpy as np
 import PLAR.utils as utils
 from PLAR.grounding import obs_2_text, script_mapping
-from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks, can_we_harvest, update_situation
+from PLAR.utils.utils import CHOSEN_MAPS, parse_task, load_args, update_tasks, check_task, update_situation
 from PLAR.llm_agents import LLMAgent
 from PLAR.utils.metric import Metric
 from gym_microrts.envs.plar_vec_env import MicroRTSGridModePLARVecEnv
@@ -18,8 +18,8 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ====================
 def get_run_log_dir(args, map_path):
     """Get the directory to save the run logs."""
-    run_dir = f"{args.blue}_runs/llm_vs_llm/"
-    run_dir += f"{args.blue_prompt[1]}_vs_{args.red_prompt[1]}/"
+    run_dir = "runs_llm_vs_llm/"
+    run_dir += f"{args.blue}_vs_{args.red}/"
     run_dir += map_path.split("maps/")[-1].split(".xml")[0].replace("/", "-")
     for i in range(1, int(1e9)):
         if not os.path.exists(f"{run_dir}_{i}"):
@@ -65,11 +65,11 @@ def end_game(env, reward, args, end_step):
     env.close()
     print("\n")
     if reward[0] > 0:
-        print(f"Game over at {end_step} step! The winner is blue {args.blue} with {args.blue_prompt[1]}")
+        print(f"Game over at {end_step} step! The winner is blue {args.blue} with {args.blue_prompt}")
     elif reward[0] < 0:
-        print(f"Game over at {end_step} step! The winner is red {args.red} with {args.red_prompt[1]}")
+        print(f"Game over at {end_step} step! The winner is red {args.red} with {args.red_prompt}")
     else:
-        print(f"Game over at {end_step} step! Draw! Between {args.blue} with {args.blue_prompt[1]} and {args.red} with {args.red_prompt[1]}")
+        print(f"Game over at {end_step} step! Draw! Between {args.blue} with {args.blue_prompt} and {args.red} with {args.red_prompt}")
 
 def switch_fight_for(fight_for):
     if fight_for == "blue":
@@ -125,7 +125,7 @@ def main():
                 situation, _ = update_situation(situation, obs_dict[side])
                 response = llm_agents[side].run(obs_text[side])
                 tasks[side] = parse_task(response)
-                tasks[side] = can_we_harvest(tasks[side], obs_dict[side], situation)
+                tasks[side] = check_task(tasks[side], obs_dict[side], situation)
         else:
             for side in sides:
                 switch_fight_for(side)

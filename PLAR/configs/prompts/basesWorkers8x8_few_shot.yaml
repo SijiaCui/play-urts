@@ -49,8 +49,8 @@ EXAMPLES: |
   [Attack Enemy](worker, worker)
   [Attack Enemy](worker, worker)
   [Attack Enemy](worker, worker)
-  [Attack Enemy](worker, base)
   [Attack Enemy](worker, barrack)
+  [Attack Enemy](worker, base)
   END OF TASK
 
   The Situation: 
@@ -60,7 +60,7 @@ EXAMPLES: |
   - Mineral Fields(7, 7) resource: 16
   You are in the **red** side.
 
-  Red's Resource: 5
+  Red's Resource: 10
   Red's Units:
   base: 1
   - (6, 5), action: noop
@@ -92,7 +92,7 @@ EXAMPLES: |
   Gaming Plan:
   START OF TASK
   [Harvest Mineral](7, 7)
-  [Harvest Mineral](7, 7)
+  [Build Building](barrack, (7, 4))
   [Produce Unit](worker, east)
   [Produce Unit](worker, south)
   [Produce Unit](worker, east)
@@ -101,6 +101,19 @@ EXAMPLES: |
   [Attack Enemy](worker, worker)
   [Attack Enemy](worker, worker)
   [Attack Enemy](worker, worker)
-  [Attack Enemy](worker, base)
   [Attack Enemy](worker, barrack)
+  [Attack Enemy](worker, base)
+  [Attack Enemy](worker, base)
   END OF TASK
+
+TIPS: |
+  - Two workers will be more efficient in harvesting, but do not exceed two.
+  - Workers offer a better cost-effectiveness, so produce them in large quantities, i.e. [Produce Unit] x4.
+  - Attack the enemy base to prevent them from returning resources to the base.
+  - If the enemy has a barracks, attack the barracks first to prevent them from producing high-level soldiers.
+  - The enemy will probably continue to create worker invasions in the next period of time, so we need a large number of [Attack Enemy] (workers, workers).
+  - If there are no resources left to harvest in the current situation, let's attack with all our workers.
+  - As long as our side have resources, don't stop producing workers. Don't stop the invasion.
+  - If your resources are less than 8, please do not build a barracks.
+  - When your resources are greater than 8, you only need one worker to harvest resources and building barracks near to base first (top priority), but don't forget to continue making workers and launching attacks.
+  - When a have a barrack, produce a ranged first.

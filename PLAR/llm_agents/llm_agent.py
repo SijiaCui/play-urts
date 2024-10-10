@@ -26,51 +26,42 @@ class LLMAgent:
         return response
 
     def _agent_prompt(self) -> str:
-        with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/instruction.txt", "r") as f:
-            instruction = f.read()
-        with open(f"/root/desc/play-urts/PLAR/configs/templates/{self.prompt_config[0]}/{self.map_name}_few_shot.yaml") as f:
-            examples = yaml.safe_load(f)["EXAMPLES"]
-        if self.prompt_config[1] == "zero_shot_prompt":
+        with open(f"/root/desc/play-urts/PLAR/configs/prompts/{self.map_name}_few_shot.yaml") as f:
+            content = yaml.safe_load(f)
+        examples = content["EXAMPLES"]
+        tips = content["TIPS"]
+        if self.prompt_config == "zero_shot":
             self.prompt = zero_shot_prompt
             kwargs = {
-                "instruction": instruction,
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-        elif self.prompt_config[1] == "few_shot_prompt":
+        elif self.prompt_config == "few_shot":
             self.prompt = few_shot_prompt
             kwargs = {
-                "instruction": instruction,
                 "examples": examples,
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-        elif self.prompt_config[1] == "zero_shot_w_expert_tips":
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/reflection/{self.map_name}_few_shot.yaml") as f:
-                tips = yaml.safe_load(f)["EXAMPLES"]
+        elif self.prompt_config == "zero_shot_w_tips":
             self.prompt = zero_shot_w_tips
             kwargs = {
-                "instruction": instruction,
                 "tips": tips,
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-        elif self.prompt_config[1] == "few_shot_w_reflect_tips":
+        elif self.prompt_config == "few_shot_w_reflect":
             tips = parse_tips(self.reflect())
             self.prompt = few_shot_w_tips
             kwargs = {
-                "instruction": instruction,
                 "examples": examples,
                 "tips": tips,
                 "observation": self.obs,
                 "fight_for": utils.FIGHT_FOR,
             }
-        elif self.prompt_config[1] == "few_shot_w_expert_tips":
-            with open(f"/root/desc/play-urts/PLAR/configs/templates/reflection/{self.map_name}_few_shot.yaml") as f:
-                tips = yaml.safe_load(f)["EXAMPLES"]
+        elif self.prompt_config == "few_shot_w_tips":
             self.prompt = few_shot_w_tips
             kwargs = {
-                "instruction": instruction,
                 "examples": examples,
                 "tips": tips,
                 "observation": self.obs,
@@ -89,8 +80,8 @@ class LLMAgent:
         return response
 
     def reflect(self):
-        with open(f"/root/desc/play-urts/PLAR/configs/templates/reflection/{self.map_name}_few_shot.yaml") as f:
-            examples = yaml.safe_load(f)["EXAMPLES"]
+        with open(f"/root/desc/play-urts/PLAR/configs/prompts/{self.map_name}_few_shot.yaml") as f:
+            examples = yaml.safe_load(f)["TIPS"]
         prompt_content = reflect_prompt.format(
             examples=examples,
             observation=self.obs,
