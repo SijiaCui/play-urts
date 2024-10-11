@@ -1,4 +1,5 @@
-from typing import Tuple, List
+from typing import Tuple, List, Optional
+from collections import deque
 
 
 FIGHT_FOR = "blue"
@@ -38,6 +39,7 @@ DIRECTION_INDEX_MAPPING = {
     "south": 2,
     "west": 3,
 }
+INDEX_DIRECTION_MAPPING = {v: k for k, v in DIRECTION_INDEX_MAPPING.items()}
 
 UNIT_DAMAGE_MAPPING = {"worker": 1, "light": 2, "heavy": 4, "ranged": 1}
 
@@ -102,99 +104,184 @@ def get_direction(location, tgt_loc) -> str:
         raise ValueError(f"I only live in two dimensions. {location} -> {tgt_loc}")
 
 
+# class path_planning:
+#     def __init__(self, valid_map) -> None:
+#         self.height = len(valid_map)
+#         self.width = len(valid_map[0])
+#         self.valid_map = valid_map
+#         self.n = self.height * self.width
+
+#         self.max_dist = 10**10
+#         # 10**10 is disconnected
+#         self.shortest_path = [
+#             [self.max_dist for _ in range(self.n)] for _ in range(self.n)
+#         ]
+#         self.first_step = [[-1 for _ in range(self.n)] for _ in range(self.n)]
+#         self.run()
+
+#     def run(self):
+#         # init
+#         for i in range(self.n):
+#             self.shortest_path[i][i] = 0
+#             self.first_step[i][i] = -1
+#             self._setup_neighbors(i)
+
+#         for k in range(self.n):
+#             if not self.valid_map[self.index2location(k)]:
+#                 continue
+#             for i in range(self.n):
+#                 for j in range(self.n):
+#                     new_path = self.shortest_path[i][k] + self.shortest_path[k][j]
+#                     if self.shortest_path[i][j] > new_path:
+#                         self.shortest_path[i][j] = new_path
+#                         self.first_step[i][j] = self.first_step[i][k]
+
+#     def _setup_neighbors(self, index):
+#         # north neighbor
+#         if index // self.width - 1 >= 0:
+#             self.shortest_path[index][index - self.width] = 1
+#             self.first_step[index][index - self.width] = DIRECTION_INDEX_MAPPING[
+#                 "north"
+#             ]
+#         # south neighbor
+#         if index // self.width + 1 < self.height:
+#             self.shortest_path[index][index + self.width] = 1
+#             self.first_step[index][index + self.width] = DIRECTION_INDEX_MAPPING[
+#                 "south"
+#             ]
+#         # east neighbor
+#         if index % self.width + 1 < self.width:
+#             self.shortest_path[index][index + 1] = 1
+#             self.first_step[index][index + 1] = DIRECTION_INDEX_MAPPING["east"]
+#         # west neighbor
+#         if index % self.width - 1 >= 0:
+#             self.shortest_path[index][index - 1] = 1
+#             self.first_step[index][index - 1] = DIRECTION_INDEX_MAPPING["west"]
+
+#     def location2index(self, location: tuple) -> int:
+#         return location[0] * self.width + location[1]
+
+#     def index2location(self, index: int) -> tuple:
+#         return (index // self.width, index % self.width)
+
+#     def get_shortest_path(self, location, tg_location) -> Tuple[int, int]:
+#         """
+#         output:
+#             int: path length
+#             int: direction
+#         """
+#         if location == tg_location:
+#             return 0, None
+#         sp = self.shortest_path[self.location2index(location)][
+#             self.location2index(tg_location)
+#         ]
+#         fs = self.first_step[self.location2index(location)][
+#             self.location2index(tg_location)
+#         ]
+
+#         return sp, fs
+#         if sp < self.max_dist:
+#             return sp, fs
+#         else:
+#             # cant find any path
+#             return None
+
+#     def get_path_nearest(self, location: tuple, targets: List[tuple]) -> tuple:
+#         min_i = 0
+#         min_path = self.max_dist
+#         for i in range(len(targets)):
+#             cur_path = self.shortest_path[self.location2index(location)][
+#                 self.location2index(targets[i])
+#             ]
+#             if cur_path < min_path:
+#                 min_i = i
+#                 min_path = cur_path
+#         return targets[min_i]
+
 class path_planning:
-    def __init__(self, valid_map) -> None:
+    DIRECTION_INDEX_MAPPING = {
+        "north": 0,
+        "east": 1,
+        "south": 2,
+        "west": 3
+    }
+
+    def __init__(self, valid_map: List[List[int]]) -> None:
         self.height = len(valid_map)
         self.width = len(valid_map[0])
         self.valid_map = valid_map
-        self.n = self.height * self.width
-
         self.max_dist = 10**10
-        # 10**10 is disconnected
-        self.shortest_path = [
-            [self.max_dist for _ in range(self.n)] for _ in range(self.n)
+
+    def _get_neighbors_with_directions(self, pos: Tuple[int, int]) -> List[Tuple[str, Tuple[int, int]]]:
+        directions = [
+            ("north", (-1, 0)),
+            ("east", (0, 1)),
+            ("south", (1, 0)),
+            ("west", (0, -1)),
         ]
-        self.first_step = [[-1 for _ in range(self.n)] for _ in range(self.n)]
-        self.run()
+        neighbors = []
+        for dir_name, (dx, dy) in directions:
+            new_x, new_y = pos[0] + dx, pos[1] + dy
+            if 0 <= new_x < self.height and 0 <= new_y < self.width:
+                neighbors.append((dir_name, (new_x, new_y)))
+        return neighbors
 
-    def run(self):
-        # init
-        for i in range(self.n):
-            self.shortest_path[i][i] = 0
-            self.first_step[i][i] = -1
-            self._setup_neighbors(i)
-
-        for k in range(self.n):
-            if not self.valid_map[self.index2location(k)]:
-                continue
-            for i in range(self.n):
-                for j in range(self.n):
-                    new_path = self.shortest_path[i][k] + self.shortest_path[k][j]
-                    if self.shortest_path[i][j] > new_path:
-                        self.shortest_path[i][j] = new_path
-                        self.first_step[i][j] = self.first_step[i][k]
-
-    def _setup_neighbors(self, index):
-        # north neighbor
-        if index // self.width - 1 >= 0:
-            self.shortest_path[index][index - self.width] = 1
-            self.first_step[index][index - self.width] = DIRECTION_INDEX_MAPPING[
-                "north"
-            ]
-        # south neighbor
-        if index // self.width + 1 < self.height:
-            self.shortest_path[index][index + self.width] = 1
-            self.first_step[index][index + self.width] = DIRECTION_INDEX_MAPPING[
-                "south"
-            ]
-        # east neighbor
-        if index % self.width + 1 < self.width:
-            self.shortest_path[index][index + 1] = 1
-            self.first_step[index][index + 1] = DIRECTION_INDEX_MAPPING["east"]
-        # west neighbor
-        if index % self.width - 1 >= 0:
-            self.shortest_path[index][index - 1] = 1
-            self.first_step[index][index - 1] = DIRECTION_INDEX_MAPPING["west"]
-
-    def location2index(self, location: tuple) -> int:
-        return location[0] * self.width + location[1]
-
-    def index2location(self, index: int) -> tuple:
-        return (index // self.width, index % self.width)
-
-    def get_shortest_path(self, location, tg_location) -> Tuple[int, int]:
+    def get_shortest_path(self, location: Tuple[int, int], tg_location: Tuple[int, int]) -> Tuple[Optional[int], Optional[int]]:
         """
-        output:
+        Returns:
             int: path length
-            int: direction
+            int: direction index (based on DIRECTION_INDEX_MAPPING)
         """
         if location == tg_location:
             return 0, None
-        sp = self.shortest_path[self.location2index(location)][
-            self.location2index(tg_location)
-        ]
-        fs = self.first_step[self.location2index(location)][
-            self.location2index(tg_location)
-        ]
 
-        return sp, fs
-        if sp < self.max_dist:
-            return sp, fs
-        else:
-            # cant find any path
-            return None
+        visited = set()
+        queue = deque()
+        queue.append((location, 0, None))  # position, path_length, first_direction
+        visited.add(location)
 
-    def get_path_nearest(self, location: tuple, targets: List[tuple]) -> tuple:
-        min_i = 0
-        min_path = self.max_dist
-        for i in range(len(targets)):
-            cur_path = self.shortest_path[self.location2index(location)][
-                self.location2index(targets[i])
-            ]
-            if cur_path < min_path:
-                min_i = i
-                min_path = cur_path
-        return targets[min_i]
+        while queue:
+            pos, dist, first_dir = queue.popleft()
+            for dir_name, neighbor in self._get_neighbors_with_directions(pos):
+                if neighbor == tg_location:
+                    if first_dir is None:
+                        first_dir = dir_name
+                    direction_index = self.DIRECTION_INDEX_MAPPING[first_dir]
+                    return dist + 1, direction_index
+                if neighbor not in visited:
+                    if self.valid_map[neighbor[0]][neighbor[1]] == 1:
+                        visited.add(neighbor)
+                        if first_dir is None:
+                            queue.append((neighbor, dist + 1, dir_name))
+                        else:
+                            queue.append((neighbor, dist + 1, first_dir))
+
+        # Cannot find a path
+        return None, None
+
+    def get_path_nearest(self, location: Tuple[int, int], targets: List[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
+        """
+        Returns:
+            Tuple[int, int]: the nearest target position
+        """
+        target_set = set(targets)
+        visited = set()
+        queue = deque()
+        queue.append((location, 0))  # position, path_length
+        visited.add(location)
+
+        while queue:
+            pos, dist = queue.popleft()
+            if pos in target_set:
+                return pos
+            for _, neighbor in self._get_neighbors_with_directions(pos):
+                if neighbor not in visited:
+                    if self.valid_map[neighbor[0]][neighbor[1]] == 1 or neighbor in target_set:
+                        visited.add(neighbor)
+                        queue.append((neighbor, dist + 1))
+
+        # Cannot find any of the targets
+        return None
 
     def get_manhattan_nearest(self, location: tuple, targets: List[tuple]) -> tuple:
         min_i = 0

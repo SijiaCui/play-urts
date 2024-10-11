@@ -195,7 +195,7 @@ class DeepSeek(LLM):
 
 
 if __name__ == "__main__":
-    # llm_agent = LLMAgent("gpt-4o-mini", 0, 1024, None, None)
+    llm_agent = LLMAgent("gpt-4o-mini", 0, 1024, None, None)
     # llm_agent = LLMAgent("deepseek-chat", 0, 1024, None, None)
-    llm_agent = LLMAgent("Qwen2-72B-Instruct", 0, 1024, None, None)
+    # llm_agent = LLMAgent("Qwen2-72B-Instruct", 0, 1024, None, None)
     print(llm_agent.llm("who are you"))

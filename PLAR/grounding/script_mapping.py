@@ -82,6 +82,8 @@ def assign_task_deploy_unit(
             path_len, _ = path_planner.get_shortest_path(
                 unit["location"], task_params[1]
             )
+            if path_len is None:
+                continue
             if path_len < min_path_len:
                 closest_unit_id = unit["id"]
                 min_path_len = path_len
@@ -105,6 +107,8 @@ def assign_task_harvest_mineral(
                 path_len = 0
             else:
                 path_len, _ = path_planner.get_shortest_path(unit["location"], task_params)
+                if path_len is None:
+                    continue
             if path_len < min_path_len:
                 closest_unit_id = unit["id"]
                 min_path_len = path_len
@@ -124,9 +128,9 @@ def assign_task_build_building(
     min_path_len = 1e9
     for unit in exist_units.values():
         if unit["task_type"] == "[noop]" and unit["type"] == "worker":
-            path_len, _ = path_planner.get_shortest_path(
-                unit["location"], task_params[1]
-            )
+            path_len, _ = path_planner.get_shortest_path(unit["location"], task_params[1])
+            if path_len is None:
+                continue
             if path_len < min_path_len:
                 closest_unit_id = unit["id"]
                 min_path_len = path_len
@@ -181,9 +185,11 @@ def assign_task_attack_enemy(
     for unit in exist_units.values():
         if unit["task_type"] == "[noop]" and unit["type"] == task_params[0]:
             nearest_loc = path_planner.get_path_nearest(unit["location"], enemy_locs)
-            closest_dist[unit["id"]], _ = path_planner.get_shortest_path(
-                unit["location"], nearest_loc
-            )
+            if nearest_loc is None:
+                continue
+            dist, _ = path_planner.get_shortest_path(unit["location"], nearest_loc)
+            if dist is not None:
+                closest_dist[unit["id"]] = dist
     if len(closest_dist) > 0:
         unit_id = min(closest_dist, key=closest_dist.get)
         exist_units[unit_id]["task_type"] = TASK_ATTACK_ENEMY
@@ -282,6 +288,8 @@ def adapt_task_build_building_params(unit, obs_dict, path_planner: path_planning
             tgt_locs.remove(tgt_loc)
     if len(tgt_locs) > 0:
         tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
+        if tgt_loc is None:
+            return (building_type, building_loc, unit["location"])  # stay
         return (building_type, building_loc, tgt_loc)
     else:
         return (building_type, building_loc, unit["location"])  # stay
@@ -297,11 +305,14 @@ def adapt_task_attack_enemy_params(unit, obs_dict, path_planner: path_planning):
     if len(enemy_locs) == 0:
         return (unit_type, enemy_type, (0, 0), unit["location"])
     enemy_loc = path_planner.get_path_nearest(unit["location"], enemy_locs)
-
+    if enemy_loc is None:
+        return  (unit_type, enemy_type, enemy_loc, unit["location"])  # stay
     tgt_locs = path_planner.get_locs_with_dist_to_tgt(
         enemy_loc, UNIT_RANGE_MAPPING[unit_type]
     )
     tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
+    if tgt_loc is None:
+        return (unit_type, enemy_type, enemy_loc, unit["location"])  # stay
     return (unit_type, enemy_type, enemy_loc, tgt_loc)
 
 
@@ -420,7 +431,3 @@ def auto_choose_target(unit: dict, obs_dict: dict, path_planner: path_planning) 
         if type_indices.size > 0:
             return targets[indices[type_indices[0]]]
     return targets[np.random.choice(len(targets))]
-
-if __name__ == "__main__":
-    obs = {"units": {(0, 6): 0, (1,7): 1}}
-    print(get_around_locs((0,7), obs))

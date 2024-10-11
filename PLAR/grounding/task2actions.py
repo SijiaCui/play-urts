@@ -338,9 +338,10 @@ def attack(unit: dict, tgt_loc: tuple, action_mask: np.ndarray) -> np.ndarray:
     Return: action vector, shape of [7]
     """
     unit_loc = tuple(unit["location"])
-    tgt_relative_loc = (tgt_loc[0] - unit_loc[0] + 3) * 7 + (
-        tgt_loc[1] - unit_loc[1] + 3
-    )
+    try:
+        tgt_relative_loc = (tgt_loc[0] - unit_loc[0] + 3) * 7 + (tgt_loc[1] - unit_loc[1] + 3)
+    except ValueError:
+        raise f"{unit} {tgt_loc}"
     if (
         action_mask[ACTION_TYPE_1 + ACTION_INDEX_MAPPING["attack"]] == 0
         or action_mask[ATTACK_PARAM_1 + tgt_relative_loc] == 0

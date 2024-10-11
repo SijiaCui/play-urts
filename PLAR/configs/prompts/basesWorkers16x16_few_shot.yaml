@@ -1,0 +1,129 @@
+EXAMPLES: |
+  The Situation: 
+  The Game map is a 16x16 grid.
+  Available Mineral Fields: 4
+  - Mineral Fields(0, 0) resource: 25
+  - Mineral Fields(1, 0) resource: 25
+  - Mineral Fields(14, 15) resource: 25
+  - Mineral Fields(15, 15) resource: 25
+  You are in the **blue** side.
+
+  Red's Resource: 5
+  Red's Units:
+  base: 1
+  - (13, 13), action: noop
+  barrack: 0
+  worker: 1
+  - (14, 14), action: noop
+  light: 0
+  heavy: 0
+  ranged: 0
+
+  Blue's Resource: 5
+  Blue's Units:
+  base: 1
+  - (2, 2), action: noop
+  barrack: 0
+  worker: 1
+  - (1, 1), action: noop
+  light: 0
+  heavy: 0
+  ranged: 0
+
+  This is the initial stage of the game, and the following task plan works best:
+  START OF TASK
+  [Produce Unit](worker, west)
+  [Produce Unit](worker, east)
+  [Produce Unit](worker, south)
+  [Harvest Mineral](1, 0)
+  [Build Building](barrack, (3, 1))
+  [Deploy Unit](worker, (5, 2))
+  [Deploy Unit](worker, (5, 1))
+  [Harvest Mineral](1, 0)
+  END OF TASK
+
+  The Situation: 
+  The Game map is a 16x16 grid.
+  Available Mineral Fields: 4
+  - Mineral Fields(0, 0) resource: 24
+  - Mineral Fields(1, 0) resource: 15
+  - Mineral Fields(14, 15) resource: 14
+  - Mineral Fields(15, 15) resource: 22
+  You are in the **red** side.
+
+  Red's Resource: 8
+  Red's Units:
+  base: 1
+  - (13, 13), action: noop
+  barrack: 1
+  - (15, 13), action: noop
+  worker: 6
+  - (12, 13), action: noop
+  - (12, 14), action: noop
+  - (13, 15), action: harvest
+  - (14, 12), action: noop
+  - (14, 14), action: noop
+  - (15, 14), action: noop
+  light: 0
+  heavy: 0
+  ranged: 1
+  - (10, 9), action: noop
+
+  Blue's Resource: 3
+  Blue's Units:
+  base: 1
+  - (2, 2), action: noop
+  barrack: 1
+  - (3, 1), action: noop
+  worker: 6
+  - (0, 4), action: noop
+  - (1, 2), action: noop
+  - (2, 3), action: noop
+  - (3, 0), action: noop
+  - (5, 1), action: noop
+  - (5, 2), action: noop
+  light: 0
+  heavy: 0
+  ranged: 1
+  - (4, 1), action: noop
+
+  Gaming Plan:
+  START OF TASK
+  [Harvest Mineral](14, 15)
+  [Harvest Mineral](14, 15)
+  [Produce Unit](worker, west)
+  [Produce Unit](worker, north)
+  [Deploy Unit](worker, (11, 13))
+  [Deploy Unit](worker, (14, 11))
+  [Harvest Mineral](0, 0)
+  [Harvest Mineral](0, 0)
+  [Produce Unit](ranged, south)
+  [Produce Unit](ranged, east)
+  [Produce Unit](ranged, south)
+  [Produce Unit](ranged, east)
+  [Attack Enemy](ranged, heavy)
+  [Attack Enemy](ranged, heavy)
+  [Attack Enemy](ranged, light)
+  [Attack Enemy](ranged, light)
+  [Attack Enemy](ranged, ranged)
+  [Attack Enemy](ranged, ranged)
+  [Attack Enemy](ranged, ranged)
+  [Attack Enemy](ranged, barrack)
+  [Attack Enemy](ranged, base)
+  [Attack Enemy](ranged, base)
+  [Attack Enemy](ranged, worker)
+  [Attack Enemy](ranged, worker)
+  END OF TASK
+
+TIPS: |
+  - Two workers will be more efficient in harvesting, but do not exceed two.
+  - Give each of your units something to do. Your plan needs to include enough tasks so that no unit is idle.
+  - Attack the enemy base to prevent them from returning resources to the base.
+  - If the enemy has a barracks, attack the barracks first to prevent them from producing high-level soldiers.
+  - If it is the initial state of the game, please let one worker go mining first, and then produce a worker to build a barracks.
+  - It takes a long time to build a barracks, so please create two more workers for defense during this period.
+  - If there are no resources left to harvest in the current situation, let's attack with all our units.
+  - As long as our side have resources, don't stop producing workers. Don't stop the invasion.
+  - You only need one barracks, don't build a duplicate if you already have one.
+  - When a have a barrack, produce a ranged first, it is the key to win the game.
+  - Don't deploy your units to the edge of the map, the direction of the enemy is what matters.
