@@ -111,6 +111,46 @@ class LLM:
         pass
 
 
+class CLAUDE(LLM):
+    def __init__(self, engine, temperature, max_tokens) -> None:
+        import os
+        import anthropic
+        self.client = anthropic.Anthropic(base_url="https://api.openai-proxy.org/anthropic", api_key=os.getenv("OPENAI_API_KEY"))
+        self.engine = engine
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+
+    def __call__(self, prompt) -> str:
+        super().__call__(prompt)
+        response = self.client.messages.create(
+            model=self.engine,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
+        return response.content[0].text
+
+
+class GEMINI(LLM):
+    def __init__(self, engine, temperature, max_tokens) -> None:
+        import os
+        import google.generativeai as genai
+        self.client = genai.GenerativeModel(engine)
+        genai.configure(api_key=os.getenv("OPENAI_API_KEY"))
+        self.generation_config = genai.GenerationConfig(
+            max_output_tokens=max_tokens,
+            temperature=temperature,
+        )
+
+    def __call__(self, prompt) -> str:
+        super().__call__(prompt)
+        response = self.client.generate_content(
+            contents=prompt,
+            generation_config=self.generation_config
+        )
+        return response.text
+
+
 class GPT(LLM):
     def __init__(self, engine, temperature, max_tokens) -> None:
         import os
