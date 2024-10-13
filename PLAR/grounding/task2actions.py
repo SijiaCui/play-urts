@@ -340,8 +340,9 @@ def attack(unit: dict, tgt_loc: tuple, action_mask: np.ndarray) -> np.ndarray:
     unit_loc = tuple(unit["location"])
     try:
         tgt_relative_loc = (tgt_loc[0] - unit_loc[0] + 3) * 7 + (tgt_loc[1] - unit_loc[1] + 3)
-    except ValueError:
-        raise f"{unit} {tgt_loc}"
+    except TypeError as e:
+        print(f"{e}\nunit={unit}\ntgt_loc={tgt_loc}")
+        return noop(unit)
     if (
         action_mask[ACTION_TYPE_1 + ACTION_INDEX_MAPPING["attack"]] == 0
         or action_mask[ATTACK_PARAM_1 + tgt_relative_loc] == 0

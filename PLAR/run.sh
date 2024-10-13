@@ -21,14 +21,14 @@ llm_team=("zero_shot_w_tips" "few_shot_w_tips")
 
 # LLM vs Rule
 
-for i in $(seq 1 5); do
-    for blue in "${llm_team[@]}"; do
-        for red in "${rules_team[@]}"; do
-            echo "[Qwen vs Rule] $blue vs $red (round $i)"
-            python llm_vs_aibot.py --red "$red" --blue_prompt "$blue" --blue "Qwen2-72B-Instruct"
-        done
-    done
-done
+# for i in $(seq 1 5); do
+#     for blue in "${llm_team[@]}"; do
+#         for red in "${rules_team[@]}"; do
+#             echo "[Qwen vs Rule] $blue vs $red (round $i)"
+#             python llm_vs_aibot.py --red "$red" --blue_prompt "$blue" --blue "Qwen2-72B-Instruct"
+#         done
+#     done
+# done
 
 # ====================
 #      gpt-4o-mini
@@ -75,16 +75,38 @@ done
 # ====================
 #     LLM vs LLM
 # ====================
-# llms=("Qwen2-72B-Instruct" "deepseek-chat" "gpt-4o-mini" "gpt-4o")
+llms=("Qwen2-72B-Instruct" "deepseek-chat" "gpt-4o-mini" "gpt-4o" "claude-3-5-sonnet-20240620" "claude-3-haiku-20240307" "gemini-1.5-flash-002" "gpt-3.5-turbo")
+new_llms=("o1-mini")
 
 # for i in $(seq 1 5); do
 #     for blue in "${llms[@]}"; do
-#         for red in "${llms[@]}"; do
+#         for red in "${new_llms[@]}"; do
 #             echo "[LLM vs LLM] $blue vs $red (round $i)"
-#             python llm_vs_llm.py --red "$red" --blue "$blue" --blue_prompt "zero_shot" --red_prompt "zero_shot"
+#             python llm_vs_llm.py --red "$red" --blue "$blue" --blue_prompt "zero_shot" --red_prompt "zero_shot" --map_index 3 --max_steps 2000 --max_tokens 256 --tasks_update_interval 100
 #         done
 #     done
 # done
+
+# for i in $(seq 1 5); do
+#     for blue in "${new_llms[@]}"; do
+#         for red in "${llms[@]}"; do
+#             echo "[LLM vs LLM] $blue vs $red (round $i)"
+#             python llm_vs_llm.py --red "$red" --blue "$blue" --blue_prompt "zero_shot" --red_prompt "zero_shot" --map_index 3 --max_steps 2000 --max_tokens 256 --tasks_update_interval 100
+#         done
+#     done
+# done
+
+# for i in $(seq 1 5); do
+#     for blue in "${new_llms[@]}"; do
+#         for red in "${new_llms[@]}"; do
+#             echo "[LLM vs LLM] $blue vs $red (round $i)"
+#             python llm_vs_llm.py --red "$red" --blue "$blue" --blue_prompt "zero_shot" --red_prompt "zero_shot" --map_index 3 --max_steps 2000 --max_tokens 256 --tasks_update_interval 100
+#         done
+#     done
+# done
+
+python llm_vs_llm.py --red "claude-3-haiku-20240307" --blue "gemini-1.5-flash-002" --blue_prompt "zero_shot" --red_prompt "zero_shot" --map_index 3 --max_steps 2000 --max_tokens 256 --tasks_update_interval 100
+python llm_vs_llm.py --red "claude-3-haiku-20240307" --blue "gemini-1.5-flash-002" --blue_prompt "zero_shot" --red_prompt "zero_shot" --map_index 3 --max_steps 2000 --max_tokens 256 --tasks_update_interval 100
 
 
 # ====================

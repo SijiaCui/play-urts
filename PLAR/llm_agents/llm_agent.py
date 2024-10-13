@@ -1,14 +1,23 @@
+from openai import OpenAI
 import yaml
 import tiktoken
 from openai import OpenAI
 
-from PLAR.llm_agents.prompts import zero_shot_prompt, few_shot_prompt, reflect_prompt, zero_shot_w_tips, few_shot_w_tips
+from PLAR.llm_agents.prompts import (
+    zero_shot_prompt,
+    few_shot_prompt,
+    reflect_prompt,
+    zero_shot_w_tips,
+    few_shot_w_tips,
+)
 from PLAR.utils.utils import parse_tips
 import PLAR.utils as utils
 
-class LLMAgent:
 
-    def __init__(self, engine, temperature, max_tokens, map_name, prompt_config) -> None:
+class LLMAgent:
+    def __init__(
+        self, engine, temperature, max_tokens, map_name, prompt_config
+    ) -> None:
         if "qwen" in engine.lower():
             self.llm = Qwen(engine, temperature, max_tokens)
         elif "gpt" in engine.lower() or "o1" in engine.lower():
@@ -17,6 +26,10 @@ class LLMAgent:
             self.llm = Llama(engine, temperature, max_tokens)
         elif "deepseek" in engine.lower():
             self.llm = DeepSeek(engine, temperature, max_tokens)
+        elif "claude" in engine.lower():
+            self.llm = CLAUDE(engine, temperature, max_tokens)
+        elif "gemini" in engine.lower():
+            self.llm = GEMINI(engine, temperature, max_tokens)
         else:
             raise ValueError("Invalid engine name")
         self.map_name = map_name
@@ -26,7 +39,9 @@ class LLMAgent:
         return response
 
     def _agent_prompt(self) -> str:
-        with open(f"/root/desc/play-urts/PLAR/configs/prompts/{self.map_name}_few_shot.yaml") as f:
+        with open(
+            f"/root/desc/play-urts/PLAR/configs/prompts/{self.map_name}_few_shot.yaml"
+        ) as f:
             content = yaml.safe_load(f)
         examples = content["EXAMPLES"]
         tips = content["TIPS"]
@@ -80,12 +95,12 @@ class LLMAgent:
         return response
 
     def reflect(self):
-        with open(f"/root/desc/play-urts/PLAR/configs/prompts/{self.map_name}_few_shot.yaml") as f:
+        with open(
+            f"/root/desc/play-urts/PLAR/configs/prompts/{self.map_name}_few_shot.yaml"
+        ) as f:
             examples = yaml.safe_load(f)["TIPS"]
         prompt_content = reflect_prompt.format(
-            examples=examples,
-            observation=self.obs,
-            fight_for=utils.FIGHT_FOR
+            examples=examples, observation=self.obs, fight_for=utils.FIGHT_FOR
         )
         try:
             response = self.llm(prompt=prompt_content)
@@ -115,7 +130,11 @@ class CLAUDE(LLM):
     def __init__(self, engine, temperature, max_tokens) -> None:
         import os
         import anthropic
-        self.client = anthropic.Anthropic(base_url="https://api.openai-proxy.org/anthropic", api_key=os.getenv("OPENAI_API_KEY"))
+
+        self.client = anthropic.Anthropic(
+            base_url="https://api.openai-proxy.org/anthropic",
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
         self.engine = engine
         self.temperature = temperature
         self.max_tokens = max_tokens
@@ -135,6 +154,7 @@ class GEMINI(LLM):
     def __init__(self, engine, temperature, max_tokens) -> None:
         import os
         import google.generativeai as genai
+
         self.client = genai.GenerativeModel(engine)
         genai.configure(
             api_key=os.getenv("OPENAI_API_KEY"),
@@ -149,8 +169,7 @@ class GEMINI(LLM):
     def __call__(self, prompt) -> str:
         super().__call__(prompt)
         response = self.client.generate_content(
-            contents=prompt,
-            generation_config=self.generation_config
+            contents=prompt, generation_config=self.generation_config
         )
         return response.text
 
@@ -159,34 +178,47 @@ class GPT(LLM):
     def __init__(self, engine, temperature, max_tokens) -> None:
         import os
 
-        self.client = OpenAI(base_url="https://api.openai-proxy.live/v1", api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = OpenAI(
+            base_url="https://api.openai-proxy.live/v1",
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
         self.engine = engine
         self.temperature = temperature
         self.max_tokens = max_tokens
 
     def __call__(self, prompt) -> str:
         super().__call__(prompt)
-        response = self.client.chat.completions.create(
-            model=self.engine,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-        )
-        return response.choices[0].message.content
-
-    def is_excessive_token(self, prompt) -> bool:
-        token_limit_gpt = 128000
-        return len(tiktoken.encoding_for_model(self.engine).encode(prompt)) > token_limit_gpt
+        if "gpt" in self.engine.lower():
+            response = self.client.chat.completions.create(
+                model=self.engine,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+            )
+            return response.choices[0].message.content
+        elif "o1" in self.engine.lower():
+            response = self.client.chat.completions.create(
+                model=self.engine,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=1,
+                max_completion_tokens=65536,
+            )
+            return response.choices[0].message.content
+        else:
+            raise ValueError(f"Invalid engine name: {self.engine}")
 
 
 class Qwen(LLM):
     def __init__(self, engine, temperature, max_tokens) -> None:
         from openai import OpenAI
         import os
-        if engine == 'Qwen1.5-72B-Chat':
+
+        if engine == "Qwen1.5-72B-Chat":
             self.client = OpenAI(base_url=os.getenv("QWEN_BASE"), api_key="XXX")
-        elif engine == 'Qwen2-72B-Instruct':
-            self.client = OpenAI(base_url=os.getenv("QWEN2_BASE"), api_key=os.getenv("QWEN2_KEY"))
+        elif engine == "Qwen2-72B-Instruct":
+            self.client = OpenAI(
+                base_url=os.getenv("QWEN2_BASE"), api_key=os.getenv("QWEN2_KEY")
+            )
         else:
             raise ValueError("Error: wrong engine name")
         self.engine = engine
@@ -199,12 +231,13 @@ class Qwen(LLM):
             model=self.engine,
             messages=[{"role": "user", "content": prompt}],
             temperature=self.temperature,
-            max_tokens=self.max_tokens,
         )
         return response.choices[0].message.content
-    
+
     def is_excessive_token(self, prompt) -> bool:
-        token_limit_qwen32k = 32*1024 # set limit <str length> 32k (approximately 8k token)
+        token_limit_qwen32k = (
+            32 * 1024
+        )  # set limit <str length> 32k (approximately 8k token)
         return len(prompt) > token_limit_qwen32k
 
 
@@ -216,7 +249,10 @@ class DeepSeek(LLM):
     def __init__(self, engine, temperature, max_tokens) -> None:
         from openai import OpenAI
         import os
-        self.client = OpenAI(base_url="https://api.deepseek.com", api_key=os.getenv("DEEPSEEK_API_KEY"))
+
+        self.client = OpenAI(
+            base_url="https://api.deepseek.com", api_key=os.getenv("DEEPSEEK_API_KEY")
+        )
 
         self.engine = engine
         self.temperature = temperature
@@ -229,17 +265,15 @@ class DeepSeek(LLM):
             messages=[{"role": "user", "content": prompt}],
             temperature=self.temperature,
             max_tokens=self.max_tokens,
-            stream=False
+            stream=False,
         )
         return response.choices[0].message.content
-    
+
     def is_excessive_token(self, prompt) -> bool:
         token_limit_deepseek = 128000
         return len(prompt) > token_limit_deepseek
 
 
 if __name__ == "__main__":
-    llm_agent = LLMAgent("gpt-4o-mini", 0, 1024, None, None)
-    # llm_agent = LLMAgent("deepseek-chat", 0, 1024, None, None)
-    # llm_agent = LLMAgent("Qwen2-72B-Instruct", 0, 1024, None, None)
+    llm_agent = LLMAgent("o1-mini", 1, 1024, None, None)
     print(llm_agent.llm("who are you"))

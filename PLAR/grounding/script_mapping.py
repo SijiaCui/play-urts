@@ -307,9 +307,7 @@ def adapt_task_attack_enemy_params(unit, obs_dict, path_planner: path_planning):
     enemy_loc = path_planner.get_path_nearest(unit["location"], enemy_locs)
     if enemy_loc is None:
         return  (unit_type, enemy_type, enemy_loc, unit["location"])  # stay
-    tgt_locs = path_planner.get_locs_with_dist_to_tgt(
-        enemy_loc, UNIT_RANGE_MAPPING[unit_type]
-    )
+    tgt_locs = path_planner.get_locs_with_dist_to_tgt(enemy_loc, UNIT_RANGE_MAPPING[unit_type])
     tgt_loc = path_planner.get_path_nearest(unit["location"], tgt_locs)
     if tgt_loc is None:
         return (unit_type, enemy_type, enemy_loc, unit["location"])  # stay
