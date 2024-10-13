@@ -136,7 +136,11 @@ class GEMINI(LLM):
         import os
         import google.generativeai as genai
         self.client = genai.GenerativeModel(engine)
-        genai.configure(api_key=os.getenv("OPENAI_API_KEY"))
+        genai.configure(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            transport="rest",
+            client_options={"api_endpoint": "https://api.openai-proxy.org/google"},
+        )
         self.generation_config = genai.GenerationConfig(
             max_output_tokens=max_tokens,
             temperature=temperature,
