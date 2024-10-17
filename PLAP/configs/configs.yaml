@@ -1,0 +1,11 @@
+max_steps: 2000
+tasks_update_interval: 100
+blue: Qwen2-72B-Instruct
+red: coacAI
+llm_engine_temperature: 0.7
+llm_engine_max_tokens: 256
+blue_prompt: zero_shot
+red_prompt: zero_shot
+video_fps: 10
+video_length: 2000
+map_index: 3

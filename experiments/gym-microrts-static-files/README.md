@@ -1,1 +1,0 @@
-# gym-microrts-static-files
