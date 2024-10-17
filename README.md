@@ -52,6 +52,10 @@ export OPENAI_API_KEY=YOUR_API_KEY
 python llm_vs_aibot.py --blue gpt-4o --blue_prompt zero_shot --red randomBiasedAI --record_video
 ```
 
+Our few shot with tips PLAP can beat [COAC](https://github.com/Coac/coac-ai-microrts), the winner of the [2020 competition](https://sites.google.com/site/micrortsaicompetition/competition-results/2020-cog-results).
+
+https://github.com/user-attachments/assets/64267684-c17f-4979-a477-68e7d96b820a
+
 ### ⚡ LLM vs LLM
 
 Of course we can also start LLM vs LLM battle：
